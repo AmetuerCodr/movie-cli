@@ -2,14 +2,16 @@ import { chromium, type Browser, type Page } from "playwright";
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
-import { applyAdblock } from "./adblock.js";
+import { applyAdblock, applyLightCapture } from "./adblock.js";
 import { logger } from "../utils/logger.js";
 
 const require = createRequire(import.meta.url);
 
+// Matches a real Chrome 124 on Windows — no "Headless" token, which fingerprinting
+// services key on to flag bot traffic.
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-  "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+  "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
 /**
  * Singleton wrapper around a Playwright Chromium browser with ad blocking
@@ -41,7 +43,7 @@ export class BrowserManager {
   }
 
   /**
-   * Open a fresh page. Captured stream URLs are appended to `streamSink`.
+   * Open a fresh page with ad blocking. Captured stream URLs are appended to `streamSink`.
    */
   async newPage(streamSink: string[]): Promise<Page> {
     if (!this.browser) {
@@ -50,9 +52,31 @@ export class BrowserManager {
     const context = await this.browser.newContext({
       userAgent: USER_AGENT,
       viewport: { width: 1280, height: 720 },
+      locale: "en-US",
+      timezoneId: "America/New_York",
     });
     const page = await context.newPage();
     await applyAdblock(page, streamSink);
+    return page;
+  }
+
+  /**
+   * Open a page WITHOUT the ad blocker. Essential for sites like videasy whose
+   * own API calls get false-positived by filter lists. Stream URLs are still
+   * captured via network monitoring.
+   */
+  async newRawPage(streamSink: string[]): Promise<Page> {
+    if (!this.browser) {
+      throw new Error("BrowserManager.init() must be called before newRawPage()");
+    }
+    const context = await this.browser.newContext({
+      userAgent: USER_AGENT,
+      viewport: { width: 1280, height: 720 },
+      locale: "en-US",
+      timezoneId: "America/New_York",
+    });
+    const page = await context.newPage();
+    await applyLightCapture(page, streamSink);
     return page;
   }
 

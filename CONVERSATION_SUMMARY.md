@@ -155,6 +155,54 @@ videasy fallback server selection).
 
 ---
 
+---
+
+## Phase 5 — Bug #4: Init script never injected (race condition + incomplete intercepts)
+
+**Symptom:** selecting a title still returned "No playable streams found" even after the Phase 4 adblocker removal.
+
+**Root causes (two independent issues):**
+
+1. **Missing `await` in `newRawPage`.** `applyLightCapture(page, streamSink)` was called without `await`. Since `applyLightCapture` is async and calls `page.addInitScript()` internally, the init script registration (a Playwright CDP call) was not guaranteed to finish before `page.goto()` ran. On most runs the race was lost — no monkey-patches were installed when the page loaded.
+
+2. **Incomplete init script intercepts.** The `CAPTURE_INIT_SCRIPT` patched `fetch`, `XHR`, and `JSON.parse`, but missed the two most reliable capture points:
+   - **`Hls.prototype.loadSource`** — this is where HLS.js first receives the plain `.m3u8` URL, *before* it converts it to a `blob:` MediaSource URL. Patching here gives us the stream URL regardless of how the player decrypts or serves it.
+   - **`HTMLMediaElement.prototype.src` setter** — catches any direct `video.src = url` assignments (needed for MP4 fallback sources).
+   - The `JSON.parse` inspection also only checked for `result.sources`; the decrypted payload from different videasy servers may use `data.sources`, `response.sources`, or direct `{url, file}` shapes. Updated to use `__inspectObj()` that recurses into common wrapper keys.
+
+**Fixes:**
+
+- `src/browser/index.ts`: added `await` to the `applyLightCapture` call in `newRawPage`.
+- `src/browser/adblock.ts`: replaced `CAPTURE_INIT_SCRIPT` with a comprehensive version that adds:
+  - `HTMLMediaElement.src` setter intercept
+  - `Hls.prototype.loadSource` patch with a 100ms polling loop (since HLS.js loads asynchronously)
+  - `__inspectObj()` recursive helper that handles `sources`, `data`, `result`, `payload` wrappers and direct `{url, file}` fields
+  - `fetch` response body peeking for API endpoints matching `sources` / `videasy` / `embed` (stored in `window.__rawResponses` for debug inspection)
+
+**Key insight:** `Hls.prototype.loadSource` is the ground truth. The entire videasy decrypt/WASM chain is upstream of HLS.js; by the time `loadSource` is called, the URL is always plaintext regardless of how the source was obtained.
+
+**Verified working** — `Michael (2026)` opened at 1080p in mpv. Debug trace showed:
+- `mb-flix` server returned 404 twice (player auto-retried)
+- `cdn` server returned 200
+- CryptoJS/JSON.parse patches captured 3 stream variants
+- Streams found after ~7ms of polling (once the decrypt fired)
+
+---
+
+## Phase 6 — Performance cleanup + stealth hardening
+
+**Symptom:** stream extraction took ~25s even though streams were available almost immediately.
+
+**Root cause:** `waitForSelector("video", { timeout: 25_000 })` always timed out — the videasy player's CryptoJS decrypt fires and captures stream URLs *before* any `<video>` element appears in the DOM. The 25s wait was pure dead time.
+
+**Fixes:**
+
+- `src/scraper/cineby.ts`: replaced the 25s `waitForSelector("video")` with a 2s hydration pause followed immediately by a click + polling. Typical time-to-stream is now 5–10s (limited by the videasy server selection/retry chain), not 25s.
+- `src/browser/index.ts`: updated `USER_AGENT` string to a clean `Chrome/124` UA (no "Headless" token).
+- `src/browser/adblock.ts`: extended the stealth block to also override `navigator.userAgentData.brands`, removing the `HeadlessChrome` entry that fingerprinting services use to flag bots. (The popup ad that appeared during testing was triggered by this signal; with this fix it should no longer appear.)
+
+---
+
 ## Final state
 
 - Search: working against the live keyless TMDB mirror.
