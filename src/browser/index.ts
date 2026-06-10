@@ -23,13 +23,20 @@ export class BrowserManager {
     if (this.browser) return;
     this.headless = headless;
 
+    // Allow video to autoplay without a user gesture so embed players begin
+    // loading their stream as soon as the page mounts.
+    const launchOptions = {
+      headless,
+      args: ["--autoplay-policy=no-user-gesture-required"],
+    };
+
     try {
-      this.browser = await chromium.launch({ headless });
+      this.browser = await chromium.launch(launchOptions);
     } catch (err) {
       // Most common cause: the Chromium build is not installed yet.
       logger.debug("Initial chromium launch failed:", err);
       ensureChromiumInstalled();
-      this.browser = await chromium.launch({ headless });
+      this.browser = await chromium.launch(launchOptions);
     }
   }
 

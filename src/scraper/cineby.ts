@@ -1,16 +1,18 @@
-import type { Page } from "playwright";
 import { browserManager } from "../browser/index.js";
 import { isStreamUrl } from "../browser/adblock.js";
 import { logger } from "../utils/logger.js";
 import { searchTmdb } from "./tmdb.js";
 import type { Provider, SearchResult, Stream } from "./types.js";
 
-// cineby.rs is dead; the project now lives at cineby.at (cineby.app redirects
-// here). Search data is served by an open TMDB mirror, and playback happens on
-// the /watch/{type}/{id} route which loads an HLS stream we capture.
-const BASE = "https://www.cineby.at";
+// cineby.rs is dead; the project now lives at cineby.at and is a frontend over
+// videasy. Search data is a keyless TMDB mirror; playback is handled by the
+// videasy player embed, which loads an HLS stream we capture off the network.
 const NAME = "cineby";
-const NAV_TIMEOUT = 15_000;
+const PLAYER_BASE = "https://player.videasy.to";
+const PLAYER_ORIGIN = "https://player.videasy.to/";
+const NAV_TIMEOUT = 30_000;
+// How long to wait for a media URL to appear after starting playback.
+const STREAM_WAIT_MS = 30_000;
 
 /**
  * Primary provider. Search is a keyless TMDB lookup (fast, no browser).
@@ -29,56 +31,36 @@ export const cinebyProvider: Provider = {
   },
 };
 
-function watchUrl(result: SearchResult): string {
-  // Movies: /watch/movie/{id}. Series default to S1E1 (episode picking is a
-  // future enhancement); the path shape is /watch/tv/{id}/{season}/{episode}.
+function playerUrl(result: SearchResult): string {
+  // Series default to S1E1 (episode picking is a future enhancement); the path
+  // shape is /tv/{id}/{season}/{episode}.
   if (result.type === "series") {
-    return `${BASE}/watch/tv/${result.id}/1/1`;
+    return `${PLAYER_BASE}/tv/${result.id}/1/1`;
   }
-  return `${BASE}/watch/movie/${result.id}`;
+  return `${PLAYER_BASE}/movie/${result.id}`;
 }
 
 async function extractStreams(result: SearchResult): Promise<Stream[]> {
   const sink: string[] = [];
   const page = await browserManager.newPage(sink);
-  const url = watchUrl(result);
+  const url = playerUrl(result);
   try {
-    logger.debug("Navigating to watch page:", url);
+    logger.debug("Opening videasy player:", url);
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: NAV_TIMEOUT });
 
-    // Kick the player and step into any embed iframe so its traffic is seen.
+    // Give the player a moment to mount, then a single click to start playback.
+    // Repeated clicks toggle play/pause, so we click once and wait passively.
+    await page.waitForTimeout(2500);
     await page.mouse.click(640, 360).catch(() => {});
-    await followEmbedIframe(page, sink);
-    await waitForStream(sink, 20_000);
 
-    return await buildStreams(sink, url);
+    await waitForStream(sink, STREAM_WAIT_MS);
+
+    return await buildStreams(sink, PLAYER_ORIGIN);
   } catch (err) {
     logger.debug("cineby stream extraction failed:", err);
-    return buildStreams(sink, url);
+    return buildStreams(sink, PLAYER_ORIGIN);
   } finally {
     await page.context().close().catch(() => {});
-  }
-}
-
-async function followEmbedIframe(page: Page, sink: string[]): Promise<void> {
-  try {
-    const handle = await page.waitForSelector("iframe[src]", { timeout: 8000 }).catch(() => null);
-    const iframeSrc = handle ? await handle.getAttribute("src") : null;
-    if (!iframeSrc) return;
-
-    const embedUrl = iframeSrc.startsWith("http") ? iframeSrc : `https:${iframeSrc}`;
-    logger.debug("Following embed iframe:", embedUrl);
-
-    const embedPage = await browserManager.newPage(sink);
-    try {
-      await embedPage.goto(embedUrl, { waitUntil: "domcontentloaded", timeout: NAV_TIMEOUT });
-      await embedPage.mouse.click(640, 360).catch(() => {});
-      await waitForStream(sink, 12_000);
-    } finally {
-      await embedPage.context().close().catch(() => {});
-    }
-  } catch (err) {
-    logger.debug("Embed iframe follow failed:", err);
   }
 }
 
