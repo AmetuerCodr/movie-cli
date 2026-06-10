@@ -1,6 +1,7 @@
 import { chromium, type Browser, type Page } from "playwright";
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 import { applyAdblock } from "./adblock.js";
 import { logger } from "../utils/logger.js";
 
@@ -61,24 +62,43 @@ let installAttempted = false;
 
 /**
  * Run `playwright install chromium` once if the browser binary is missing.
+ * Playwright's exports map does not expose "playwright/cli", so we locate
+ * cli.js relative to its package.json (which is exported).
  */
 export function ensureChromiumInstalled(): void {
   if (installAttempted) return;
   installAttempted = true;
   console.log("Installing browser for scraping (first run only)…");
-  const result = spawnSync(
-    process.execPath,
-    [require.resolve("playwright/cli"), "install", "chromium", "--with-deps"],
-    { stdio: "inherit" },
-  );
+
+  let cliPath: string;
+  try {
+    const pkgPath = require.resolve("playwright/package.json");
+    cliPath = join(dirname(pkgPath), "cli.js");
+  } catch (err) {
+    logger.debug("Could not locate playwright package:", err);
+    throw installFailure();
+  }
+
+  const result = spawnSync(process.execPath, [cliPath, "install", "chromium", "--with-deps"], {
+    stdio: "inherit",
+  });
   if (result.status !== 0) {
     // Fall back to the plain install without system deps (no root needed).
-    spawnSync(
-      process.execPath,
-      [require.resolve("playwright/cli"), "install", "chromium"],
-      { stdio: "inherit" },
-    );
+    const plain = spawnSync(process.execPath, [cliPath, "install", "chromium"], {
+      stdio: "inherit",
+    });
+    if (plain.status !== 0) {
+      throw installFailure();
+    }
   }
+}
+
+function installFailure(): Error {
+  return new Error(
+    "Could not install Playwright's Chromium automatically.\n" +
+      "Install it manually and re-run:\n" +
+      "  npx playwright install chromium",
+  );
 }
 
 // Shared instance used across the app.
