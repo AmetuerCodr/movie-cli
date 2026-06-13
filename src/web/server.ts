@@ -67,6 +67,29 @@ export function startServer(port: number = DEFAULT_PORT): Promise<{ close(): voi
         return;
       }
 
+      // Proxy TMDB images to avoid CDN CORS / network restrictions.
+      // /img/w342/abc.jpg  →  https://image.tmdb.org/t/p/w342/abc.jpg
+      if (url.pathname.startsWith("/img/")) {
+        const imgPath = url.pathname.replace("/img", "");
+        const tmdbImgUrl = `https://image.tmdb.org/t/p${imgPath}`;
+        try {
+          const imgRes = await fetch(tmdbImgUrl, { headers: { "User-Agent": UA } });
+          if (imgRes.ok) {
+            const buf = await imgRes.arrayBuffer();
+            const ct = imgRes.headers.get("content-type") ?? "image/jpeg";
+            res.writeHead(200, { "Content-Type": ct, "Cache-Control": "public, max-age=86400" });
+            res.end(Buffer.from(buf));
+          } else {
+            res.writeHead(imgRes.status);
+            res.end();
+          }
+        } catch {
+          res.writeHead(502);
+          res.end();
+        }
+        return;
+      }
+
       res.writeHead(404);
       res.end("Not found");
     });

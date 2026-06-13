@@ -7,832 +7,550 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    :root {
-      --blur: 24px;
-      --glass-bg: rgba(255,255,255,0.06);
-      --glass-border: rgba(255,255,255,0.12);
-      --glass-hover: rgba(255,255,255,0.11);
-      --accent: #60a5fa;
-      --accent2: #a855f7;
-      --text: #f0f0f8;
-      --text-dim: rgba(255,255,255,0.5);
-      --card-radius: 16px;
-      --transition: 0.35s cubic-bezier(.22,.68,0,1.2);
-    }
-
-    html { font-size: 16px; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
 
     body {
+      background: #141414;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
       min-height: 100vh;
-      background: #05050f;
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
-      overflow-x: hidden;
     }
 
-    /* ── Background ─────────────────────────────────────────── */
-    .bg {
-      position: fixed; inset: 0; z-index: 0;
-      background:
-        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(96,165,250,0.18) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 50% at 80% 85%, rgba(168,85,247,0.18) 0%, transparent 55%),
-        radial-gradient(ellipse 50% 40% at 55% 50%, rgba(52,211,153,0.08) 0%, transparent 55%),
-        linear-gradient(160deg, #0a0a1e 0%, #0e0622 35%, #060d1e 65%, #0a0514 100%);
-      pointer-events: none;
-    }
-
-    .bg::after {
-      content: '';
-      position: absolute; inset: 0;
-      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
-      opacity: 0.4;
-    }
-
-    /* ── Layout ────────────────────────────────────────────── */
-    .app { position: relative; z-index: 1; min-height: 100vh; }
-
-    /* ── Nav ───────────────────────────────────────────────── */
+    /* ── Nav ────────────────────────────────────────────── */
     nav {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 20px 40px;
-      background: rgba(5,5,15,0.6);
-      backdrop-filter: blur(var(--blur));
-      -webkit-backdrop-filter: blur(var(--blur));
-      border-bottom: 1px solid var(--glass-border);
-      position: sticky; top: 0; z-index: 100;
+      padding: 28px 40px;
     }
 
-    .nav-logo {
-      display: flex; align-items: center; gap: 12px;
+    .logo {
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #fff;
     }
 
-    .logo-icon {
-      width: 36px; height: 36px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
-      box-shadow: 0 0 20px rgba(96,165,250,0.35);
-    }
-
-    .logo-text {
-      font-size: 1.2rem;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .nav-actions {
-      display: flex; align-items: center; gap: 16px;
-    }
-
-    /* ── Search ─────────────────────────────────────────────── */
-    .search-wrap {
-      position: relative; width: 340px;
-    }
+    /* ── Search ─────────────────────────────────────────── */
+    .search-wrap { position: relative; }
 
     .search-wrap svg {
-      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
-      color: var(--text-dim); pointer-events: none;
+      position: absolute; left: 0; top: 50%;
+      transform: translateY(-50%);
+      color: rgba(255,255,255,0.35);
+      pointer-events: none;
     }
 
     #search-input {
-      width: 100%;
-      padding: 10px 16px 10px 42px;
-      background: var(--glass-bg);
-      border: 1px solid var(--glass-border);
-      border-radius: 50px;
-      color: var(--text);
-      font-size: 0.875rem;
-      outline: none;
-      backdrop-filter: blur(12px);
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-
-    #search-input::placeholder { color: var(--text-dim); }
-
-    #search-input:focus {
-      border-color: rgba(96,165,250,0.5);
-      box-shadow: 0 0 0 3px rgba(96,165,250,0.12), 0 0 20px rgba(96,165,250,0.1);
-    }
-
-    /* ── Hero ───────────────────────────────────────────────── */
-    .hero {
-      position: relative;
-      height: 520px;
-      overflow: hidden;
-      display: flex;
-      align-items: flex-end;
-    }
-
-    .hero-backdrop {
-      position: absolute; inset: 0;
-      background-size: cover;
-      background-position: center 20%;
-      filter: blur(2px) brightness(0.45);
-      transform: scale(1.05);
-      transition: opacity 1s;
-    }
-
-    .hero-overlay {
-      position: absolute; inset: 0;
-      background: linear-gradient(to top,
-        rgba(5,5,15,1) 0%,
-        rgba(5,5,15,0.7) 40%,
-        rgba(5,5,15,0.2) 75%,
-        transparent 100%);
-    }
-
-    .hero-content {
-      position: relative;
-      padding: 0 40px 40px;
-      max-width: 700px;
-    }
-
-    .hero-badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 4px 12px;
-      background: var(--glass-bg);
-      border: 1px solid var(--glass-border);
-      border-radius: 50px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--accent);
-      backdrop-filter: blur(12px);
-      margin-bottom: 16px;
-    }
-
-    .hero-title {
-      font-size: 3rem;
-      font-weight: 800;
-      line-height: 1.1;
-      margin-bottom: 12px;
-      letter-spacing: -0.02em;
-      text-shadow: 0 2px 20px rgba(0,0,0,0.5);
-    }
-
-    .hero-meta {
-      display: flex; align-items: center; gap: 16px;
-      font-size: 0.9rem;
-      color: var(--text-dim);
-      margin-bottom: 20px;
-    }
-
-    .hero-rating {
-      color: #fbbf24;
-      font-weight: 600;
-    }
-
-    .hero-overview {
-      font-size: 0.95rem;
-      line-height: 1.6;
-      color: rgba(255,255,255,0.75);
-      max-width: 560px;
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      margin-bottom: 24px;
-    }
-
-    .hero-actions { display: flex; gap: 12px; }
-
-    /* ── Buttons ────────────────────────────────────────────── */
-    .btn {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 11px 24px;
-      border-radius: 50px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
+      background: none;
       border: none;
-      transition: var(--transition);
-      text-decoration: none;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-bottom: 1px solid rgba(255,255,255,0.18);
       color: #fff;
-      box-shadow: 0 4px 20px rgba(96,165,250,0.35);
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      padding: 6px 0 6px 24px;
+      width: 220px;
+      outline: none;
+      transition: border-color 0.2s;
     }
 
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 30px rgba(96,165,250,0.5);
-    }
+    #search-input::placeholder { color: rgba(255,255,255,0.3); }
+    #search-input:focus { border-bottom-color: rgba(255,255,255,0.6); }
 
-    .btn-glass {
-      background: var(--glass-bg);
-      border: 1px solid var(--glass-border);
-      color: var(--text);
-      backdrop-filter: blur(12px);
-    }
+    /* ── Section label ──────────────────────────────────── */
+    .section { padding: 0 40px 48px; }
 
-    .btn-glass:hover {
-      background: var(--glass-hover);
-      border-color: rgba(255,255,255,0.2);
-      transform: translateY(-2px);
-    }
-
-    /* ── Section ────────────────────────────────────────────── */
-    .section {
-      padding: 40px 40px 0;
-    }
-
-    .section-title {
-      font-size: 1.3rem;
-      font-weight: 700;
+    .section-label {
+      font-size: 0.65rem;
+      font-weight: 500;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.35);
       margin-bottom: 20px;
-      letter-spacing: -0.01em;
     }
 
-    .section-title span {
-      background: linear-gradient(90deg, var(--text), var(--text-dim));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    /* ── Movie grid ─────────────────────────────────────────── */
-    .movie-grid {
+    /* ── Grid ───────────────────────────────────────────── */
+    .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 20px;
-      padding-bottom: 40px;
-    }
-
-    .movie-card {
-      position: relative;
-      border-radius: var(--card-radius);
-      overflow: hidden;
-      cursor: pointer;
-      transition: var(--transition);
-      background: var(--glass-bg);
-      border: 1px solid var(--glass-border);
-      backdrop-filter: blur(12px);
-    }
-
-    .movie-card:hover {
-      transform: translateY(-6px) scale(1.02);
-      border-color: rgba(96,165,250,0.35);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 30px rgba(96,165,250,0.12);
-    }
-
-    .movie-card:hover .card-overlay { opacity: 1; }
-    .movie-card:hover .card-poster { filter: brightness(0.6); }
-
-    .card-poster-wrap {
-      position: relative;
-      aspect-ratio: 2/3;
-      overflow: hidden;
-    }
-
-    .card-poster {
-      width: 100%; height: 100%;
-      object-fit: cover;
-      display: block;
-      transition: filter 0.3s;
-    }
-
-    .card-poster-placeholder {
-      width: 100%; height: 100%;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
+      grid-template-columns: repeat(6, 1fr);
       gap: 10px;
     }
 
-    .card-poster-placeholder .ph-icon {
-      font-size: 2.4rem; opacity: 0.5;
+    .row {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 10px;
     }
 
-    .card-poster-placeholder .ph-title {
-      font-size: 0.7rem;
-      font-weight: 600;
-      text-align: center;
-      color: rgba(255,255,255,0.5);
-      padding: 0 10px;
-      line-height: 1.3;
-      max-height: 2.6em;
+    /* ── Card ───────────────────────────────────────────── */
+    .card {
+      cursor: pointer;
+    }
+
+    .card-img {
+      position: relative;
+      aspect-ratio: 2/3;
       overflow: hidden;
+      background: #1e1e1e;
     }
 
-    .card-overlay {
-      position: absolute; inset: 0;
-      background: linear-gradient(to top, rgba(5,5,15,0.9) 0%, transparent 60%);
-      display: flex; align-items: center; justify-content: center;
-      opacity: 0;
+    .card-img img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
       transition: opacity 0.3s;
     }
 
-    .card-play {
-      width: 52px; height: 52px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.15);
-      border: 2px solid rgba(255,255,255,0.4);
+    .card:hover .card-img img { opacity: 0.55; }
+
+    .card-img-overlay {
+      position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
-      backdrop-filter: blur(8px);
-      transition: var(--transition);
+      opacity: 0;
+      transition: opacity 0.25s;
     }
 
-    .card-play:hover {
-      background: rgba(255,255,255,0.25);
-      transform: scale(1.1);
+    .card:hover .card-img-overlay { opacity: 1; }
+
+    .play-icon {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,0.7);
+      display: flex; align-items: center; justify-content: center;
     }
 
-    .card-play svg { margin-left: 3px; }
+    .play-icon svg { margin-left: 2px; }
 
-    .card-type-badge {
-      position: absolute; top: 10px; right: 10px;
-      padding: 3px 9px;
-      border-radius: 50px;
-      font-size: 0.68rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      backdrop-filter: blur(8px);
-    }
-
-    .badge-movie { background: rgba(96,165,250,0.25); color: #93c5fd; border: 1px solid rgba(96,165,250,0.3); }
-    .badge-series { background: rgba(168,85,247,0.25); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.3); }
-
-    .card-info {
-      padding: 12px 14px 14px;
+    .card-meta {
+      padding: 9px 0 0;
     }
 
     .card-title {
-      font-size: 0.875rem;
-      font-weight: 600;
-      line-height: 1.3;
-      margin-bottom: 4px;
+      font-size: 0.75rem;
+      font-weight: 400;
+      color: rgba(255,255,255,0.85);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      line-height: 1.4;
     }
 
-    .card-meta {
-      display: flex; align-items: center; justify-content: space-between;
-      font-size: 0.75rem;
-      color: var(--text-dim);
+    .card-sub {
+      font-size: 0.68rem;
+      color: rgba(255,255,255,0.3);
+      margin-top: 2px;
+      display: flex; gap: 8px;
     }
 
-    .card-rating {
-      color: #fbbf24;
-      font-weight: 600;
-      font-size: 0.78rem;
+    .card-rating { color: rgba(255,255,255,0.45); }
+
+    /* ── Hero ───────────────────────────────────────────── */
+    .hero {
+      padding: 0 40px 56px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      align-items: end;
     }
 
-    /* ── Search results state ───────────────────────────────── */
-    .search-header {
-      display: flex; align-items: center; gap: 12px;
-      margin-bottom: 24px;
+    .hero-poster {
+      aspect-ratio: 2/3;
+      max-height: 480px;
+      width: auto;
+      background: #1e1e1e;
+      overflow: hidden;
     }
 
-    .search-header h2 {
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: var(--text-dim);
+    .hero-poster img {
+      width: 100%; height: 100%;
+      object-fit: cover; display: block;
     }
 
-    .search-header h2 em {
-      color: var(--text);
-      font-style: normal;
+    .hero-info { padding-bottom: 8px; }
+
+    .hero-eyebrow {
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.35);
+      margin-bottom: 20px;
+    }
+
+    .hero-title {
+      font-size: 2.8rem;
+      font-weight: 300;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+
+    .hero-overview {
+      font-size: 0.82rem;
+      line-height: 1.7;
+      color: rgba(255,255,255,0.45);
+      max-width: 420px;
+      margin-bottom: 28px;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .hero-meta {
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.3);
+      letter-spacing: 0.08em;
+      display: flex; gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .watch-btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-size: 0.72rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 12px 24px;
+      background: none;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .watch-btn:hover {
+      border-color: #fff;
+    }
+
+    /* ── Loading ────────────────────────────────────────── */
+    .loading {
+      padding: 80px 40px;
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.25);
+    }
+
+    /* ── Search results ─────────────────────────────────── */
+    .search-bar {
+      display: flex; align-items: center; gap: 16px;
+      padding: 0 40px 32px;
+    }
+
+    .search-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+    }
+
+    .search-term {
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.7);
     }
 
     .back-btn {
-      background: none;
-      border: none;
-      color: var(--accent);
-      cursor: pointer;
-      font-size: 0.85rem;
-      display: flex; align-items: center; gap: 6px;
-      padding: 6px 0;
-      transition: opacity 0.2s;
+      background: none; border: none; cursor: pointer;
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.35);
+      margin-left: auto;
+      transition: color 0.2s;
     }
 
-    .back-btn:hover { opacity: 0.75; }
+    .back-btn:hover { color: #fff; }
 
-    /* ── Empty state ────────────────────────────────────────── */
+    /* ── Empty ──────────────────────────────────────────── */
     .empty {
-      text-align: center;
-      padding: 80px 20px;
-      color: var(--text-dim);
+      padding: 80px 40px;
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.2);
     }
 
-    .empty-icon { font-size: 3.5rem; margin-bottom: 16px; }
-    .empty p { font-size: 0.95rem; }
-
-    /* ── Loading ─────────────────────────────────────────────── */
-    .loading {
-      display: flex; justify-content: center; align-items: center;
-      padding: 80px 20px; gap: 8px;
-    }
-
-    .dot {
-      width: 10px; height: 10px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      animation: bounce 1.2s infinite ease-in-out;
-    }
-
-    .dot:nth-child(2) { animation-delay: 0.2s; }
-    .dot:nth-child(3) { animation-delay: 0.4s; }
-
-    @keyframes bounce {
-      0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
-      40% { transform: scale(1); opacity: 1; }
-    }
-
-    /* ── Toast ───────────────────────────────────────────────── */
+    /* ── Toast ──────────────────────────────────────────── */
     #toast {
-      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px);
-      padding: 12px 24px;
-      background: var(--glass-bg);
-      border: 1px solid var(--glass-border);
-      border-radius: 50px;
-      backdrop-filter: blur(20px);
-      font-size: 0.875rem;
-      color: var(--text);
-      transition: transform 0.4s cubic-bezier(.22,.68,0,1.2), opacity 0.3s;
-      opacity: 0; z-index: 999;
-      white-space: nowrap;
+      position: fixed; bottom: 32px; left: 40px;
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.6);
+      transform: translateY(20px);
+      opacity: 0;
+      transition: transform 0.3s, opacity 0.3s;
+      pointer-events: none;
     }
 
-    #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    #toast.show { transform: translateY(0); opacity: 1; }
 
-    /* ── Scroll row ──────────────────────────────────────────── */
-    .scroll-row {
-      display: flex; gap: 16px;
-      overflow-x: auto; padding-bottom: 12px;
-      scrollbar-width: none;
-    }
-
-    .scroll-row::-webkit-scrollbar { display: none; }
-
-    .scroll-row .movie-card { min-width: 160px; flex-shrink: 0; }
-
-    /* ── CLI hint ────────────────────────────────────────────── */
-    .cli-hint {
+    /* ── Divider ────────────────────────────────────────── */
+    .divider {
+      height: 1px;
+      background: rgba(255,255,255,0.06);
       margin: 0 40px 48px;
-      padding: 20px 24px;
-      background: var(--glass-bg);
-      border: 1px solid var(--glass-border);
-      border-radius: 14px;
-      backdrop-filter: blur(12px);
-      display: flex; align-items: center; gap: 16px;
     }
 
-    .cli-hint-icon {
-      font-size: 1.8rem; flex-shrink: 0;
-    }
-
-    .cli-hint-text { flex: 1; }
-    .cli-hint-text p { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
-    .cli-hint-text strong { font-size: 0.95rem; }
-
-    .cli-code {
-      font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
-      font-size: 0.8rem;
-      padding: 4px 10px;
-      background: rgba(255,255,255,0.08);
-      border-radius: 6px;
-      color: var(--accent);
-      border: 1px solid rgba(255,255,255,0.08);
-    }
-
-    /* ── Responsive ──────────────────────────────────────────── */
-    @media (max-width: 640px) {
-      nav { padding: 16px 20px; }
-      .hero { height: 380px; }
+    /* ── Responsive ─────────────────────────────────────── */
+    @media (max-width: 900px) {
+      nav { padding: 20px 24px; }
+      .section { padding: 0 24px 40px; }
+      .divider { margin: 0 24px 40px; }
+      .hero { padding: 0 24px 48px; grid-template-columns: 1fr; }
+      .hero-poster { display: none; }
       .hero-title { font-size: 2rem; }
-      .hero-content { padding: 0 20px 28px; }
-      .section { padding: 24px 20px 0; }
-      .movie-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px; }
-      .cli-hint { margin: 0 20px 40px; }
-      .search-wrap { width: 200px; }
+      .grid { grid-template-columns: repeat(4, 1fr); }
+      .row { grid-template-columns: repeat(4, 1fr); }
+      .search-bar { padding: 0 24px 28px; }
+      .empty, .loading { padding: 60px 24px; }
+    }
+
+    @media (max-width: 560px) {
+      .grid, .row { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      #search-input { width: 160px; }
     }
   </style>
 </head>
 <body>
-  <div class="bg"></div>
-  <div class="app">
-    <!-- Nav -->
-    <nav>
-      <div class="nav-logo">
-        <div class="logo-icon">▶</div>
-        <span class="logo-text">MOV-CLI</span>
-      </div>
-      <div class="nav-actions">
-        <div class="search-wrap">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-          </svg>
-          <input id="search-input" type="text" placeholder="Search movies &amp; series…" autocomplete="off">
-        </div>
-      </div>
-    </nav>
 
-    <!-- Main content -->
-    <main id="main"></main>
-  </div>
+  <!-- Nav -->
+  <nav>
+    <span class="logo">Mov-CLI</span>
+    <div class="search-wrap">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input id="search-input" type="text" placeholder="Search…" autocomplete="off" spellcheck="false">
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main id="main"></main>
 
   <div id="toast"></div>
 
   <script>
-    const TMDB_PROXY = '/api';
-    const IMG = 'https://image.tmdb.org/t/p/';
-    const BACKDROP_SIZE = 'w1280';
-    const POSTER_SIZE = 'w342';
+    const IMG_BASE = '/img';
 
-    let state = { view: 'home', trending: [], query: '' };
-
-    // ── Utils ───────────────────────────────────────────────
-    async function apiFetch(path) {
-      const r = await fetch(TMDB_PROXY + path);
-      if (!r.ok) throw new Error(`API ${r.status}`);
-      return r.json();
+    function posterSrc(path, size = 'w342') {
+      return path ? `${IMG_BASE}/${size}${path}` : null;
     }
 
-    function toast(msg, ms = 3500) {
+    function backdropSrc(path) {
+      return path ? `${IMG_BASE}/w1280${path}` : null;
+    }
+
+    function title(item) { return item.title || item.name || 'Untitled'; }
+    function year(item) {
+      const d = item.release_date || item.first_air_date;
+      return d ? d.slice(0, 4) : '';
+    }
+    function rating(item) {
+      return item.vote_average ? item.vote_average.toFixed(1) : '';
+    }
+    function type(item) {
+      if (item.media_type === 'tv') return 'Series';
+      if (item.media_type === 'movie') return 'Film';
+      return item.title ? 'Film' : 'Series';
+    }
+
+    // ── Toast ─────────────────────────────────────────────
+    function toast(msg) {
       const el = document.getElementById('toast');
       el.textContent = msg;
       el.classList.add('show');
       clearTimeout(el._t);
-      el._t = setTimeout(() => el.classList.remove('show'), ms);
+      el._t = setTimeout(() => el.classList.remove('show'), 3500);
     }
 
-    function formatRating(v) {
-      return v != null ? `★ ${Number(v).toFixed(1)}` : '';
+    function onWatch(item) {
+      navigator.clipboard?.writeText('bunx mov-cli');
+      toast(`Copied  ·  search "${title(item)}" in your terminal`);
     }
 
-    function posterUrl(path, size = POSTER_SIZE) {
-      return path ? `${IMG}${size}${path}` : null;
-    }
+    // ── Card ──────────────────────────────────────────────
+    function makeCard(item) {
+      const src = posterSrc(item.poster_path);
+      const t = title(item);
+      const y = year(item);
+      const r = rating(item);
 
-    function backdropUrl(path) {
-      return path ? `${IMG}${BACKDROP_SIZE}${path}` : null;
-    }
-
-    function itemTitle(item) {
-      return item.title || item.name || 'Untitled';
-    }
-
-    function itemYear(item) {
-      const d = item.release_date || item.first_air_date;
-      return d ? d.slice(0, 4) : '';
-    }
-
-    function itemType(item) {
-      if (item.media_type === 'tv') return 'series';
-      if (item.media_type === 'movie') return 'movie';
-      return item.title ? 'movie' : 'series';
-    }
-
-    // ── CLI launch hint ─────────────────────────────────────
-    function cliCommand(title) {
-      return `bunx mov-cli`;
-    }
-
-    function copyCmd(title) {
-      navigator.clipboard?.writeText(`bunx mov-cli`);
-      toast(`Copy "bunx mov-cli" then search for: ${title}`);
-    }
-
-    // ── Gradient palette for placeholders ────────────────────
-    const PALETTES = [
-      ['#1a1040','#3b82f6','#a855f7'],
-      ['#0d1f3c','#06b6d4','#3b82f6'],
-      ['#1a0a2e','#ec4899','#a855f7'],
-      ['#0a1a0a','#10b981','#06b6d4'],
-      ['#1f0a0a','#f97316','#ef4444'],
-      ['#0a0a1a','#6366f1','#a855f7'],
-      ['#1a1a0a','#eab308','#f97316'],
-      ['#0a1a1a','#14b8a6','#10b981'],
-    ];
-
-    function cardGradient(title) {
-      let h = 0;
-      for (let i = 0; i < title.length; i++) h = (h * 31 + title.charCodeAt(i)) >>> 0;
-      const [bg, c1, c2] = PALETTES[h % PALETTES.length];
-      return `linear-gradient(160deg, ${bg} 0%, ${c1}55 55%, ${c2}44 100%)`;
-    }
-
-    // ── Card component ──────────────────────────────────────
-    function renderCard(item) {
-      const poster = posterUrl(item.poster_path);
-      const title = itemTitle(item);
-      const year = itemYear(item);
-      const rating = formatRating(item.vote_average);
-      const type = itemType(item);
-      const grad = cardGradient(title);
-      const div = document.createElement('div');
-      div.className = 'movie-card';
-      div.dataset.title = title;
-
-      const posterHtml = poster
-        ? `<img class="card-poster" src="${poster}" alt="${title}" loading="lazy"
-             onerror="this.parentElement.style.background='${grad}';this.style.display='none'">`
-        : `<div class="card-poster-placeholder">
-             <div class="ph-icon">🎬</div>
-             <div class="ph-title">${title}</div>
-           </div>`;
-
-      div.innerHTML = `
-        <div class="card-poster-wrap" style="background:${grad}">
-          ${posterHtml}
-          <div class="card-overlay">
-            <div class="card-play">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="card-img">
+          ${src ? `<img src="${src}" alt="${t}" loading="lazy">` : ''}
+          <div class="card-img-overlay">
+            <div class="play-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
                 <polygon points="5,3 19,12 5,21"/>
               </svg>
             </div>
           </div>
-          <span class="card-type-badge ${type === 'series' ? 'badge-series' : 'badge-movie'}">
-            ${type === 'series' ? 'Series' : 'Movie'}
-          </span>
         </div>
-        <div class="card-info">
-          <div class="card-title">${title}</div>
-          <div class="card-meta">
-            <span>${year}</span>
-            ${rating ? `<span class="card-rating">${rating}</span>` : ''}
+        <div class="card-meta">
+          <div class="card-title">${t}</div>
+          <div class="card-sub">
+            ${y ? `<span>${y}</span>` : ''}
+            ${r ? `<span class="card-rating">${r}</span>` : ''}
           </div>
         </div>`;
-      div.addEventListener('click', () => copyCmd(title));
+      card.addEventListener('click', () => onWatch(item));
+      return card;
+    }
+
+    // ── Hero ──────────────────────────────────────────────
+    function renderHero(item) {
+      const t = title(item);
+      const y = year(item);
+      const r = rating(item);
+      const tp = type(item);
+      const poster = posterSrc(item.poster_path, 'w500');
+
+      const div = document.createElement('div');
+      div.className = 'hero';
+      div.innerHTML = `
+        <div class="hero-poster">
+          ${poster ? `<img src="${poster}" alt="${t}">` : ''}
+        </div>
+        <div class="hero-info">
+          <div class="hero-eyebrow">${tp} · Trending Now</div>
+          <h1 class="hero-title">${t}</h1>
+          <div class="hero-meta">
+            ${y ? `<span>${y}</span>` : ''}
+            ${r ? `<span>${r} / 10</span>` : ''}
+            ${item.original_language ? `<span>${item.original_language.toUpperCase()}</span>` : ''}
+          </div>
+          ${item.overview ? `<p class="hero-overview">${item.overview}</p>` : ''}
+          <button class="watch-btn" id="hero-watch-btn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="5,3 19,12 5,21"/>
+            </svg>
+            Watch
+          </button>
+        </div>`;
+      div.querySelector('#hero-watch-btn').addEventListener('click', () => onWatch(item));
       return div;
     }
 
-    // ── Hero ─────────────────────────────────────────────────
-    function renderHero(item) {
-      if (!item) return '';
-      const backdrop = backdropUrl(item.backdrop_path);
-      const title = itemTitle(item);
-      const year = itemYear(item);
-      const rating = formatRating(item.vote_average);
-      const overview = item.overview || '';
-      const type = itemType(item);
-      return `
-        <div class="hero" id="hero">
-          <div class="hero-backdrop" style="background-image:url('${backdrop || ''}');background:${backdropUrl(item.backdrop_path) ? '' : 'linear-gradient(160deg,#1a1040,#0e0622)'}"></div>
-          <div class="hero-overlay"></div>
-          <div class="hero-content">
-            <div class="hero-badge">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
-              ${type === 'series' ? 'Series' : 'Movie'} · Trending Now
-            </div>
-            <h1 class="hero-title">${title}</h1>
-            <div class="hero-meta">
-              ${year ? `<span>${year}</span>` : ''}
-              ${rating ? `<span class="hero-rating">${rating}</span>` : ''}
-              ${item.original_language ? `<span>${item.original_language.toUpperCase()}</span>` : ''}
-            </div>
-            ${overview ? `<p class="hero-overview">${overview}</p>` : ''}
-            <div class="hero-actions">
-              <button class="btn btn-primary" onclick="copyCmd('${title.replace(/'/g,"\\'")}')">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
-                Watch Now
-              </button>
-              <button class="btn btn-glass" onclick="toast('Add to list coming soon!')">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-                My List
-              </button>
-            </div>
-          </div>
-        </div>`;
+    // ── Render row/grid of cards ──────────────────────────
+    function makeGrid(items, cls = 'grid') {
+      const el = document.createElement('div');
+      el.className = cls;
+      items.forEach(item => el.appendChild(makeCard(item)));
+      return el;
     }
 
-    // ── Loading ───────────────────────────────────────────────
-    function renderLoading() {
-      return `<div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+    // ── Section wrapper ───────────────────────────────────
+    function makeSection(label, content) {
+      const sec = document.createElement('div');
+      sec.className = 'section';
+      sec.innerHTML = `<div class="section-label">${label}</div>`;
+      sec.appendChild(content);
+      return sec;
     }
 
-    // ── Home view ─────────────────────────────────────────────
-    function renderHome() {
-      const trending = state.trending;
-      const hero = trending[0];
-      const featured = trending.slice(1, 7);
-      const popular = trending.slice(7, 14);
-      const movies = trending.filter(i => itemType(i) === 'movie').slice(0, 7);
-      const series = trending.filter(i => itemType(i) === 'series').slice(0, 7);
-
+    // ── Home view ─────────────────────────────────────────
+    function renderHome(trending) {
       const main = document.getElementById('main');
-      main.innerHTML = `
-        ${renderHero(hero)}
-        <div class="section">
-          <div class="section-title"><span>Trending This Week</span></div>
-          <div class="scroll-row" id="row-trending"></div>
-        </div>
-        <div class="section">
-          <div class="section-title"><span>Popular Movies</span></div>
-          <div class="scroll-row" id="row-movies"></div>
-        </div>
-        <div class="section">
-          <div class="section-title"><span>Popular Series</span></div>
-          <div class="scroll-row" id="row-series"></div>
-        </div>
-        <div class="section" style="margin-bottom: 0;">
-          <div class="section-title"><span>More to Explore</span></div>
-          <div class="movie-grid" id="grid-more"></div>
-        </div>
-        <div class="cli-hint">
-          <div class="cli-hint-icon">⌨️</div>
-          <div class="cli-hint-text">
-            <strong>Launch from your terminal</strong>
-            <p>Click any title above to copy the launch command, then run <span class="cli-code">bunx mov-cli</span> in your terminal to stream it.</p>
-          </div>
-        </div>`;
+      main.innerHTML = '';
 
-      const rowTrending = document.getElementById('row-trending');
-      const rowMovies = document.getElementById('row-movies');
-      const rowSeries = document.getElementById('row-series');
-      const gridMore = document.getElementById('grid-more');
+      const featured = trending[0];
+      const rest = trending.slice(1);
+      const films = rest.filter(i => i.media_type !== 'tv');
+      const series = rest.filter(i => i.media_type === 'tv');
 
-      featured.forEach(item => rowTrending.appendChild(renderCard(item)));
-      movies.forEach(item => rowMovies.appendChild(renderCard(item)));
-      series.forEach(item => rowSeries.appendChild(renderCard(item)));
-      popular.forEach(item => gridMore.appendChild(renderCard(item)));
+      // Hero
+      if (featured) main.appendChild(renderHero(featured));
+
+      const div1 = document.createElement('div'); div1.className = 'divider';
+      main.appendChild(div1);
+
+      main.appendChild(makeSection('Trending', makeGrid(rest.slice(0, 12), 'grid')));
+
+      if (films.length > 0) {
+        const div2 = document.createElement('div'); div2.className = 'divider';
+        main.appendChild(div2);
+        main.appendChild(makeSection('Films', makeGrid(films.slice(0, 7), 'row')));
+      }
+
+      if (series.length > 0) {
+        const div3 = document.createElement('div'); div3.className = 'divider';
+        main.appendChild(div3);
+        main.appendChild(makeSection('Series', makeGrid(series.slice(0, 7), 'row')));
+      }
     }
 
-    // ── Search view ───────────────────────────────────────────
+    // ── Search view ───────────────────────────────────────
     function renderSearch(results, query) {
       const main = document.getElementById('main');
-      main.innerHTML = `
-        <div class="section" style="padding-top: 40px;">
-          <div class="search-header">
-            <button class="back-btn" id="back-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
-              Back
-            </button>
-            <h2>Results for <em>"${query}"</em></h2>
-          </div>
-          ${results.length === 0
-            ? `<div class="empty"><div class="empty-icon">🔍</div><p>No results found for <strong>${query}</strong></p></div>`
-            : `<div class="movie-grid" id="search-grid"></div>`
-          }
-        </div>
-        <div style="height:40px"></div>`;
+      main.innerHTML = '';
 
-      document.getElementById('back-btn')?.addEventListener('click', () => {
+      const bar = document.createElement('div');
+      bar.className = 'search-bar';
+      bar.innerHTML = `
+        <span class="search-label">Results</span>
+        <span class="search-term">"${query}"</span>
+        <button class="back-btn" id="back">Clear</button>`;
+      bar.querySelector('#back').addEventListener('click', () => {
         document.getElementById('search-input').value = '';
-        renderHome();
+        loadHome();
       });
+      main.appendChild(bar);
 
-      const grid = document.getElementById('search-grid');
-      if (grid) results.forEach(item => grid.appendChild(renderCard(item)));
+      if (results.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'No results found';
+        main.appendChild(empty);
+        return;
+      }
+
+      main.appendChild(makeGrid(results, 'grid section'));
+      main.querySelector('.section').style.paddingTop = '0';
     }
 
-    // ── Search logic ──────────────────────────────────────────
-    let searchTimeout;
-    document.getElementById('search-input').addEventListener('input', (e) => {
-      clearTimeout(searchTimeout);
-      const q = e.target.value.trim();
-      if (!q) { renderHome(); return; }
-      searchTimeout = setTimeout(() => doSearch(q), 450);
-    });
-
-    document.getElementById('search-input').addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        e.target.value = '';
-        renderHome();
-      }
-    });
-
-    async function doSearch(query) {
-      document.getElementById('main').innerHTML = `<div class="section" style="padding-top:40px">${renderLoading()}</div>`;
-      try {
-        const data = await apiFetch(`/search/multi?query=${encodeURIComponent(query)}&language=en`);
-        const results = (data.results || []).filter(i => i.media_type !== 'person');
-        renderSearch(results, query);
-      } catch (err) {
-        document.getElementById('main').innerHTML = `<div class="section" style="padding-top:40px"><div class="empty"><div class="empty-icon">⚠️</div><p>Search failed. Check your connection.</p></div></div>`;
-      }
+    // ── Data fetching ─────────────────────────────────────
+    async function apiFetch(path) {
+      const r = await fetch('/api' + path);
+      if (!r.ok) throw new Error('API error');
+      return r.json();
     }
 
-    // ── Init ──────────────────────────────────────────────────
-    async function init() {
-      document.getElementById('main').innerHTML = renderLoading();
+    async function loadHome() {
+      document.getElementById('main').innerHTML = '<div class="loading">Loading…</div>';
       try {
         const data = await apiFetch('/trending/all/week');
-        state.trending = (data.results || []).filter(i => i.media_type !== 'person');
-        renderHome();
-      } catch (err) {
-        document.getElementById('main').innerHTML = `
-          <div class="section" style="padding-top:80px">
-            <div class="empty">
-              <div class="empty-icon">🎬</div>
-              <p>Could not load trending content. Make sure the server is running.</p>
-            </div>
-          </div>`;
+        const items = (data.results || []).filter(i => i.media_type !== 'person');
+        renderHome(items);
+      } catch {
+        document.getElementById('main').innerHTML = '<div class="empty">Could not load content</div>';
       }
     }
 
-    init();
+    let searchTimer;
+    document.getElementById('search-input').addEventListener('input', e => {
+      clearTimeout(searchTimer);
+      const q = e.target.value.trim();
+      if (!q) { loadHome(); return; }
+      searchTimer = setTimeout(async () => {
+        document.getElementById('main').innerHTML = '<div class="loading">Searching…</div>';
+        try {
+          const data = await apiFetch(`/search/multi?query=${encodeURIComponent(q)}&language=en`);
+          const results = (data.results || []).filter(i => i.media_type !== 'person');
+          renderSearch(results, q);
+        } catch {
+          document.getElementById('main').innerHTML = '<div class="empty">Search failed</div>';
+        }
+      }, 420);
+    });
+
+    document.getElementById('search-input').addEventListener('keydown', e => {
+      if (e.key === 'Escape') { e.target.value = ''; loadHome(); }
+    });
+
+    loadHome();
   </script>
 </body>
 </html>
