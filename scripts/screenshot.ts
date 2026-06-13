@@ -45,17 +45,16 @@ console.log("✓ screenshot-home.png");
 await page.screenshot({ path: join(OUT, "screenshot-full.png"), fullPage: true });
 console.log("✓ screenshot-full.png");
 
-// ── Modal (click first trending card) ────────────────────
+// ── Player loading state (click first card) ──────────────
 const firstCard = await page.locator(".grid .card").first();
 await firstCard.click();
-await page.waitForSelector("#modal-backdrop.open", { timeout: 5_000 });
-await waitForImages(10_000).catch(() => {});
-await page.waitForTimeout(300);
+await page.waitForSelector("#player-view.open", { timeout: 5_000 });
+await page.waitForTimeout(600); // let status text render
 
-await page.screenshot({ path: join(OUT, "screenshot-modal.png") });
-console.log("✓ screenshot-modal.png");
+await page.screenshot({ path: join(OUT, "screenshot-player.png") });
+console.log("✓ screenshot-player.png");
 
-// close modal
+// close player
 await page.keyboard.press("Escape");
 await page.waitForTimeout(200);
 

@@ -1,9 +1,12 @@
-import { createServer } from "node:http";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readConfig } from "../utils/config.js";
 import { logger } from "../utils/logger.js";
+import { browserManager } from "../browser/index.js";
+import { getStreamsWithFallback } from "../scraper/index.js";
+import type { SearchResult } from "../scraper/types.js";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const HTML = readFileSync(join(__dir, "ui.html"), "utf8");
@@ -16,45 +19,133 @@ const UA =
 
 export const DEFAULT_PORT = 7891;
 
-async function tmdbBase(): Promise<string[]> {
+// ── TMDB helpers ────────────────────────────────────────────
+async function tmdbBases(): Promise<string[]> {
   const config = await readConfig();
   return config.tmdbApiKey ? [OFFICIAL_BASE, TMDB_PROXY] : [TMDB_PROXY, OFFICIAL_BASE];
 }
 
 async function proxyTmdb(path: string): Promise<unknown> {
-  const bases = await tmdbBase();
+  const bases = await tmdbBases();
   const config = await readConfig();
   const keyParam = config.tmdbApiKey ? `&api_key=${config.tmdbApiKey}` : "";
 
   for (const base of bases) {
     try {
       const url = `${base}${path}${path.includes("?") ? keyParam : "?" + keyParam.slice(1)}`;
-      const res = await fetch(url, {
-        headers: { Accept: "application/json", "User-Agent": UA },
-      });
+      const res = await fetch(url, { headers: { Accept: "application/json", "User-Agent": UA } });
       if (res.ok) return res.json();
-      logger.debug(`TMDB proxy ${base} returned ${res.status}`);
+      logger.debug(`TMDB ${base} → ${res.status}`);
     } catch (err) {
-      logger.debug(`TMDB proxy ${base} threw:`, err);
+      logger.debug(`TMDB ${base} threw:`, err);
     }
   }
   throw new Error("All TMDB endpoints failed");
 }
 
+// ── Browser lifecycle ────────────────────────────────────────
+let browserReady = false;
+async function ensureBrowser(): Promise<void> {
+  if (!browserReady) {
+    logger.debug("Initialising headless browser for stream extraction…");
+    await browserManager.init(true);
+    browserReady = true;
+  }
+}
+
+// ── Body reader ──────────────────────────────────────────────
+function readBody(req: IncomingMessage): Promise<string> {
+  return new Promise((resolve) => {
+    let body = "";
+    req.on("data", (chunk: Buffer) => (body += chunk.toString()));
+    req.on("end", () => resolve(body));
+  });
+}
+
+// ── HLS proxy ────────────────────────────────────────────────
+// Fetches a URL server-side and returns it with CORS headers.
+// For m3u8 playlists, rewrites relative/absolute segment URLs so
+// subsequent fetches also flow through this proxy (needed when the
+// stream CDN enforces Referer or blocks direct browser access).
+async function handleHlsProxy(
+  url: URL,
+  res: ServerResponse,
+): Promise<void> {
+  const rawTarget = url.searchParams.get("url");
+  const referer = url.searchParams.get("referer") ?? "";
+
+  if (!rawTarget) {
+    res.writeHead(400);
+    res.end("Missing url param");
+    return;
+  }
+
+  const target = decodeURIComponent(rawTarget);
+
+  try {
+    const upstream = await fetch(target, {
+      headers: {
+        "User-Agent": UA,
+        ...(referer ? { Referer: decodeURIComponent(referer) } : {}),
+      },
+    });
+
+    const ct = upstream.headers.get("content-type") ?? "";
+    const isPlaylist = ct.includes("mpegurl") || target.split("?")[0]?.endsWith(".m3u8");
+
+    if (isPlaylist) {
+      const text = await upstream.text();
+      const base = new URL(target);
+      const enc = (u: string) => encodeURIComponent(u);
+
+      const rewritten = text
+        .split("\n")
+        .map((line) => {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith("#")) return line;
+          const abs = new URL(trimmed, base).href;
+          return `/hls-proxy?url=${enc(abs)}&referer=${enc(referer)}`;
+        })
+        .join("\n");
+
+      res.writeHead(200, {
+        "Content-Type": "application/vnd.apple.mpegurl",
+        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "no-cache",
+      });
+      res.end(rewritten);
+    } else {
+      const buf = await upstream.arrayBuffer();
+      res.writeHead(upstream.status, {
+        "Content-Type": ct || "application/octet-stream",
+        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "public, max-age=3600",
+      });
+      res.end(Buffer.from(buf));
+    }
+  } catch (err) {
+    logger.debug("hls-proxy error:", err);
+    res.writeHead(502);
+    res.end("Proxy error");
+  }
+}
+
+// ── Server ───────────────────────────────────────────────────
 export function startServer(port: number = DEFAULT_PORT): Promise<{ close(): void; port: number }> {
   return new Promise((resolve) => {
     const server = createServer(async (req, res) => {
       const url = new URL(req.url ?? "/", `http://localhost:${port}`);
-
       res.setHeader("Access-Control-Allow-Origin", "*");
 
+      // ── HTML ──────────────────────────────────────────────
       if (url.pathname === "/" || url.pathname === "/index.html") {
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
         res.end(HTML);
         return;
       }
 
-      if (url.pathname.startsWith("/api/")) {
+      // ── TMDB API proxy ─────────────────────────────────────
+      if (url.pathname.startsWith("/api/") && req.method === "GET") {
         const tmdbPath = url.pathname.replace("/api", "") + (url.search || "");
         try {
           const data = await proxyTmdb(tmdbPath);
@@ -67,8 +158,42 @@ export function startServer(port: number = DEFAULT_PORT): Promise<{ close(): voi
         return;
       }
 
-      // Proxy TMDB images to avoid CDN CORS / network restrictions.
-      // /img/w342/abc.jpg  →  https://image.tmdb.org/t/p/w342/abc.jpg
+      // ── Stream extraction ──────────────────────────────────
+      if (url.pathname === "/api/streams" && req.method === "POST") {
+        try {
+          const body = await readBody(req);
+          const { id, title, type, year, provider = "cineby" } = JSON.parse(body) as {
+            id: string;
+            title: string;
+            type: "movie" | "series";
+            year: number | null;
+            provider?: string;
+          };
+
+          const result: SearchResult = {
+            id,
+            title,
+            type,
+            year,
+            rating: null,
+            poster: null,
+            provider,
+          };
+
+          await ensureBrowser();
+          const streams = await getStreamsWithFallback(provider, result);
+
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ streams }));
+        } catch (err) {
+          logger.debug("streams error:", err);
+          res.writeHead(500, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: String(err) }));
+        }
+        return;
+      }
+
+      // ── Image proxy ────────────────────────────────────────
       if (url.pathname.startsWith("/img/")) {
         const imgPath = url.pathname.replace("/img", "");
         const tmdbImgUrl = `https://image.tmdb.org/t/p${imgPath}`;
@@ -90,23 +215,29 @@ export function startServer(port: number = DEFAULT_PORT): Promise<{ close(): voi
         return;
       }
 
+      // ── HLS proxy ──────────────────────────────────────────
+      if (url.pathname === "/hls-proxy") {
+        await handleHlsProxy(url, res);
+        return;
+      }
+
       res.writeHead(404);
       res.end("Not found");
     });
 
     server.listen(port, "127.0.0.1", () => {
-      resolve({
-        close: () => server.close(),
-        port,
-      });
+      resolve({ close: () => server.close(), port });
     });
   });
 }
 
-// Standalone entrypoint when run directly.
+// Standalone entrypoint
 if (process.argv[1] && fileURLToPath(import.meta.url).endsWith(process.argv[1]!.split("/").pop()!)) {
   const { port } = await startServer(DEFAULT_PORT);
-  console.log(`\n  🎬  MOV-CLI Web UI\n`);
-  console.log(`  Open: \x1b[36mhttp://localhost:${port}\x1b[0m\n`);
-  console.log(`  Press Ctrl+C to stop.\n`);
+  console.log(`\n  MOV-CLI Web\n`);
+  console.log(`  http://localhost:${port}\n`);
+  process.on("SIGINT", async () => {
+    if (browserReady) await browserManager.close();
+    process.exit(0);
+  });
 }

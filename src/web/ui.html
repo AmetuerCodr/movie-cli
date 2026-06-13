@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MOV-CLI</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     html { font-size: 16px; -webkit-font-smoothing: antialiased; }
 
     body {
@@ -16,406 +16,245 @@
       min-height: 100vh;
     }
 
-    /* ── Nav ────────────────────────────────────────────── */
+    /* ── Nav ─────────────────────────────────────────────── */
     nav {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      display: flex; align-items: center; justify-content: space-between;
       padding: 28px 40px;
     }
 
     .logo {
-      font-size: 0.8rem;
-      font-weight: 600;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: #fff;
+      font-size: 0.8rem; font-weight: 600;
+      letter-spacing: 0.18em; text-transform: uppercase;
     }
 
-    /* ── Search ─────────────────────────────────────────── */
     .search-wrap { position: relative; }
 
     .search-wrap svg {
-      position: absolute; left: 0; top: 50%;
-      transform: translateY(-50%);
-      color: rgba(255,255,255,0.35);
-      pointer-events: none;
+      position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+      color: rgba(255,255,255,0.35); pointer-events: none;
     }
 
     #search-input {
-      background: none;
-      border: none;
+      background: none; border: none;
       border-bottom: 1px solid rgba(255,255,255,0.18);
-      color: #fff;
-      font-size: 0.8rem;
-      letter-spacing: 0.08em;
-      padding: 6px 0 6px 24px;
-      width: 220px;
-      outline: none;
+      color: #fff; font-size: 0.8rem; letter-spacing: 0.08em;
+      padding: 6px 0 6px 24px; width: 220px; outline: none;
       transition: border-color 0.2s;
     }
 
     #search-input::placeholder { color: rgba(255,255,255,0.3); }
     #search-input:focus { border-bottom-color: rgba(255,255,255,0.6); }
 
-    /* ── Section label ──────────────────────────────────── */
+    /* ── Sections ────────────────────────────────────────── */
     .section { padding: 0 40px 48px; }
 
     .section-label {
-      font-size: 0.65rem;
-      font-weight: 500;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.35);
-      margin-bottom: 20px;
+      font-size: 0.65rem; font-weight: 500;
+      letter-spacing: 0.2em; text-transform: uppercase;
+      color: rgba(255,255,255,0.35); margin-bottom: 20px;
     }
 
-    /* ── Grid ───────────────────────────────────────────── */
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 10px;
-    }
+    .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+    .row  { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
 
-    .row {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 10px;
-    }
-
-    /* ── Card ───────────────────────────────────────────── */
-    .card {
-      cursor: pointer;
-    }
+    /* ── Card ────────────────────────────────────────────── */
+    .card { cursor: pointer; }
 
     .card-img {
-      position: relative;
-      aspect-ratio: 2/3;
-      overflow: hidden;
-      background: #1e1e1e;
+      position: relative; aspect-ratio: 2/3;
+      overflow: hidden; background: #1e1e1e;
     }
 
     .card-img img {
-      width: 100%; height: 100%;
-      object-fit: cover;
-      display: block;
+      width: 100%; height: 100%; object-fit: cover; display: block;
       transition: opacity 0.3s;
     }
 
-    .card:hover .card-img img { opacity: 0.55; }
+    .card:hover .card-img img { opacity: 0.5; }
 
     .card-img-overlay {
       position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
-      opacity: 0;
-      transition: opacity 0.25s;
+      opacity: 0; transition: opacity 0.25s;
     }
 
     .card:hover .card-img-overlay { opacity: 1; }
 
     .play-icon {
-      width: 40px; height: 40px;
-      border-radius: 50%;
+      width: 40px; height: 40px; border-radius: 50%;
       border: 1.5px solid rgba(255,255,255,0.7);
       display: flex; align-items: center; justify-content: center;
     }
 
     .play-icon svg { margin-left: 2px; }
 
-    .card-meta {
-      padding: 9px 0 0;
-    }
+    .card-meta { padding: 9px 0 0; }
 
     .card-title {
-      font-size: 0.75rem;
-      font-weight: 400;
+      font-size: 0.75rem; font-weight: 400;
       color: rgba(255,255,255,0.85);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       line-height: 1.4;
     }
 
     .card-sub {
-      font-size: 0.68rem;
-      color: rgba(255,255,255,0.3);
-      margin-top: 2px;
-      display: flex; gap: 8px;
+      font-size: 0.68rem; color: rgba(255,255,255,0.3);
+      margin-top: 2px; display: flex; gap: 8px;
     }
 
-    .card-rating { color: rgba(255,255,255,0.45); }
-
-    /* ── Hero ───────────────────────────────────────────── */
+    /* ── Hero ────────────────────────────────────────────── */
     .hero {
       padding: 0 40px 56px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 40px;
-      align-items: end;
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 40px; align-items: end;
     }
 
     .hero-poster {
-      aspect-ratio: 2/3;
-      max-height: 480px;
-      width: auto;
-      background: #1e1e1e;
-      overflow: hidden;
+      aspect-ratio: 2/3; max-height: 480px;
+      background: #1e1e1e; overflow: hidden;
     }
 
-    .hero-poster img {
-      width: 100%; height: 100%;
-      object-fit: cover; display: block;
-    }
+    .hero-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
     .hero-info { padding-bottom: 8px; }
 
     .hero-eyebrow {
-      font-size: 0.65rem;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.35);
-      margin-bottom: 20px;
+      font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase;
+      color: rgba(255,255,255,0.35); margin-bottom: 20px;
     }
 
     .hero-title {
-      font-size: 2.8rem;
-      font-weight: 300;
-      line-height: 1.1;
-      letter-spacing: -0.02em;
-      margin-bottom: 16px;
+      font-size: 2.8rem; font-weight: 300;
+      line-height: 1.1; letter-spacing: -0.02em; margin-bottom: 16px;
     }
 
     .hero-overview {
-      font-size: 0.82rem;
-      line-height: 1.7;
-      color: rgba(255,255,255,0.45);
-      max-width: 420px;
-      margin-bottom: 28px;
-      display: -webkit-box;
-      -webkit-line-clamp: 4;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+      font-size: 0.82rem; line-height: 1.7;
+      color: rgba(255,255,255,0.45); max-width: 420px; margin-bottom: 28px;
+      display: -webkit-box; -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical; overflow: hidden;
     }
 
     .hero-meta {
-      font-size: 0.7rem;
-      color: rgba(255,255,255,0.3);
-      letter-spacing: 0.08em;
-      display: flex; gap: 16px;
-      margin-bottom: 28px;
+      font-size: 0.7rem; color: rgba(255,255,255,0.3);
+      letter-spacing: 0.08em; display: flex; gap: 16px; margin-bottom: 28px;
     }
 
     .watch-btn {
       display: inline-flex; align-items: center; gap: 10px;
-      font-size: 0.72rem;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: #fff;
-      border: 1px solid rgba(255,255,255,0.3);
-      padding: 12px 24px;
-      background: none;
-      cursor: pointer;
-      transition: border-color 0.2s, color 0.2s;
+      font-size: 0.72rem; letter-spacing: 0.15em; text-transform: uppercase;
+      color: #fff; border: 1px solid rgba(255,255,255,0.3);
+      padding: 12px 24px; background: none; cursor: pointer;
+      transition: border-color 0.2s;
     }
 
-    .watch-btn:hover {
-      border-color: #fff;
-    }
+    .watch-btn:hover { border-color: #fff; }
 
-    /* ── Loading ────────────────────────────────────────── */
-    .loading {
-      padding: 80px 40px;
-      font-size: 0.7rem;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
+    /* ── State labels ─────────────────────────────────────── */
+    .loading, .empty {
+      padding: 80px 40px; font-size: 0.7rem;
+      letter-spacing: 0.15em; text-transform: uppercase;
       color: rgba(255,255,255,0.25);
     }
 
-    /* ── Search results ─────────────────────────────────── */
+    /* ── Search header ───────────────────────────────────── */
     .search-bar {
       display: flex; align-items: center; gap: 16px;
       padding: 0 40px 32px;
     }
 
     .search-label {
-      font-size: 0.65rem;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.3);
+      font-size: 0.65rem; letter-spacing: 0.15em;
+      text-transform: uppercase; color: rgba(255,255,255,0.3);
     }
 
-    .search-term {
-      font-size: 0.65rem;
-      letter-spacing: 0.08em;
-      color: rgba(255,255,255,0.7);
-    }
+    .search-term { font-size: 0.65rem; color: rgba(255,255,255,0.7); }
 
     .back-btn {
       background: none; border: none; cursor: pointer;
-      font-size: 0.65rem;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.35);
-      margin-left: auto;
-      transition: color 0.2s;
+      font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase;
+      color: rgba(255,255,255,0.35); margin-left: auto; transition: color 0.2s;
     }
 
     .back-btn:hover { color: #fff; }
 
-    /* ── Empty ──────────────────────────────────────────── */
-    .empty {
-      padding: 80px 40px;
-      font-size: 0.7rem;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.2);
+    .divider { height: 1px; background: rgba(255,255,255,0.06); margin: 0 40px 48px; }
+
+    /* ── Player ──────────────────────────────────────────── */
+    #player-view {
+      position: fixed; inset: 0; z-index: 200;
+      background: #000;
+      display: none; flex-direction: column;
     }
 
-    /* ── Toast ──────────────────────────────────────────── */
-    #toast {
-      position: fixed; bottom: 32px; left: 40px;
-      font-size: 0.7rem;
-      letter-spacing: 0.1em;
-      color: rgba(255,255,255,0.6);
-      transform: translateY(20px);
-      opacity: 0;
-      transition: transform 0.3s, opacity 0.3s;
+    #player-view.open { display: flex; }
+
+    #video {
+      width: 100%; height: 100%;
+      object-fit: contain; display: block;
+    }
+
+    #player-ui {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      justify-content: space-between;
+      opacity: 0; transition: opacity 0.3s; pointer-events: none;
+    }
+
+    #player-view:hover #player-ui,
+    #player-view.show-ui #player-ui { opacity: 1; pointer-events: all; }
+
+    .player-top {
+      padding: 24px 28px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, transparent 100%);
+      display: flex; align-items: center; gap: 16px;
+    }
+
+    #player-back {
+      background: none; border: none; cursor: pointer;
+      font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase;
+      color: rgba(255,255,255,0.7); transition: color 0.15s;
+    }
+
+    #player-back:hover { color: #fff; }
+
+    #player-title {
+      font-size: 0.85rem; font-weight: 400;
+      color: rgba(255,255,255,0.8); letter-spacing: 0.04em;
+    }
+
+    /* ── Player loading / error ──────────────────────────── */
+    #player-status {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 16px;
       pointer-events: none;
     }
 
-    #toast.show { transform: translateY(0); opacity: 1; }
-
-    /* ── Divider ────────────────────────────────────────── */
-    .divider {
-      height: 1px;
-      background: rgba(255,255,255,0.06);
-      margin: 0 40px 48px;
+    #player-status-text {
+      font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
     }
 
-    /* ── Modal ──────────────────────────────────────────── */
-    #modal-backdrop {
-      position: fixed; inset: 0; z-index: 200;
-      background: rgba(0,0,0,0.85);
-      display: flex; align-items: center; justify-content: center;
-      padding: 32px;
-      opacity: 0; pointer-events: none;
-      transition: opacity 0.2s;
+    #player-status-sub {
+      font-size: 0.65rem; color: rgba(255,255,255,0.2);
+      letter-spacing: 0.1em; max-width: 360px; text-align: center;
     }
 
-    #modal-backdrop.open { opacity: 1; pointer-events: all; }
-
-    #modal {
-      background: #1c1c1c;
-      max-width: 760px; width: 100%;
-      display: grid;
-      grid-template-columns: 200px 1fr;
-      gap: 0;
-      transform: translateY(12px);
-      transition: transform 0.25s;
-      max-height: calc(100vh - 64px);
-      overflow: hidden;
+    /* animated dots */
+    .dots::after {
+      content: '';
+      animation: dots 1.5s steps(4, end) infinite;
     }
 
-    #modal-backdrop.open #modal { transform: translateY(0); }
-
-    .modal-poster {
-      background: #111;
-      aspect-ratio: 2/3;
-      overflow: hidden;
-      flex-shrink: 0;
+    @keyframes dots {
+      0%  { content: ''; }
+      25% { content: '.'; }
+      50% { content: '..'; }
+      75% { content: '...'; }
     }
 
-    .modal-poster img {
-      width: 100%; height: 100%;
-      object-fit: cover; display: block;
-    }
-
-    .modal-body {
-      padding: 36px 32px 32px;
-      display: flex; flex-direction: column;
-      overflow-y: auto;
-    }
-
-    .modal-close {
-      align-self: flex-end;
-      background: none; border: none; cursor: pointer;
-      color: rgba(255,255,255,0.3);
-      font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase;
-      padding: 0; margin-bottom: 24px;
-      transition: color 0.15s;
-    }
-
-    .modal-close:hover { color: #fff; }
-
-    .modal-eyebrow {
-      font-size: 0.62rem; letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.3);
-      margin-bottom: 10px;
-    }
-
-    .modal-title {
-      font-size: 1.6rem; font-weight: 300;
-      letter-spacing: -0.01em; line-height: 1.2;
-      margin-bottom: 12px;
-    }
-
-    .modal-meta {
-      font-size: 0.68rem; color: rgba(255,255,255,0.3);
-      letter-spacing: 0.08em;
-      display: flex; gap: 14px;
-      margin-bottom: 20px;
-    }
-
-    .modal-overview {
-      font-size: 0.78rem; line-height: 1.7;
-      color: rgba(255,255,255,0.45);
-      margin-bottom: 28px;
-      flex: 1;
-    }
-
-    .modal-cmd-label {
-      font-size: 0.62rem; letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.25);
-      margin-bottom: 10px;
-    }
-
-    .modal-cmd {
-      display: flex; align-items: center;
-      gap: 0;
-      border: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .modal-cmd code {
-      font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
-      font-size: 0.78rem;
-      color: rgba(255,255,255,0.75);
-      padding: 12px 16px;
-      flex: 1;
-      letter-spacing: 0.04em;
-    }
-
-    .modal-copy {
-      background: none; border: none;
-      border-left: 1px solid rgba(255,255,255,0.1);
-      color: rgba(255,255,255,0.35);
-      font-size: 0.62rem; letter-spacing: 0.15em; text-transform: uppercase;
-      padding: 0 16px; height: 44px;
-      cursor: pointer; white-space: nowrap;
-      transition: color 0.15s, background 0.15s;
-    }
-
-    .modal-copy:hover { color: #fff; background: rgba(255,255,255,0.05); }
-    .modal-copy.copied { color: #fff; }
-
-    @media (max-width: 600px) {
-      #modal { grid-template-columns: 1fr; }
-      .modal-poster { display: none; }
-      #modal-backdrop { padding: 16px; align-items: flex-end; }
-    }
-
-    /* ── Responsive ─────────────────────────────────────── */
+    /* ── Responsive ──────────────────────────────────────── */
     @media (max-width: 900px) {
       nav { padding: 20px 24px; }
       .section { padding: 0 24px 40px; }
@@ -424,9 +263,9 @@
       .hero-poster { display: none; }
       .hero-title { font-size: 2rem; }
       .grid { grid-template-columns: repeat(4, 1fr); }
-      .row { grid-template-columns: repeat(4, 1fr); }
+      .row  { grid-template-columns: repeat(4, 1fr); }
       .search-bar { padding: 0 24px 28px; }
-      .empty, .loading { padding: 60px 24px; }
+      .loading, .empty { padding: 60px 24px; }
     }
 
     @media (max-width: 560px) {
@@ -437,7 +276,6 @@
 </head>
 <body>
 
-  <!-- Nav -->
   <nav>
     <span class="logo">Mov-CLI</span>
     <div class="search-wrap">
@@ -448,123 +286,147 @@
     </div>
   </nav>
 
-  <!-- Main -->
   <main id="main"></main>
 
-  <!-- Modal -->
-  <div id="modal-backdrop">
-    <div id="modal">
-      <div class="modal-poster" id="modal-poster"></div>
-      <div class="modal-body">
-        <button class="modal-close" id="modal-close">Close</button>
-        <div class="modal-eyebrow" id="modal-eyebrow"></div>
-        <div class="modal-title" id="modal-title"></div>
-        <div class="modal-meta" id="modal-meta"></div>
-        <p class="modal-overview" id="modal-overview"></p>
-        <div class="modal-cmd-label">Run in terminal</div>
-        <div class="modal-cmd">
-          <code id="modal-cmd-text">bunx mov-cli</code>
-          <button class="modal-copy" id="modal-copy">Copy</button>
-        </div>
+  <!-- ── Player ──────────────────────────────────────────── -->
+  <div id="player-view">
+    <video id="video" controls></video>
+
+    <div id="player-ui">
+      <div class="player-top">
+        <button id="player-back">← Back</button>
+        <span id="player-title"></span>
       </div>
+    </div>
+
+    <div id="player-status">
+      <div id="player-status-text"></div>
+      <div id="player-status-sub"></div>
     </div>
   </div>
 
-
   <script>
-    const IMG_BASE = '/img';
-
-    function posterSrc(path, size = 'w342') {
-      return path ? `${IMG_BASE}/${size}${path}` : null;
-    }
-
-    function backdropSrc(path) {
-      return path ? `${IMG_BASE}/w1280${path}` : null;
-    }
-
-    function title(item) { return item.title || item.name || 'Untitled'; }
-    function year(item) {
-      const d = item.release_date || item.first_air_date;
+    // ── Helpers ───────────────────────────────────────────────
+    function itemTitle(i) { return i.title || i.name || 'Untitled'; }
+    function itemYear(i) {
+      const d = i.release_date || i.first_air_date;
       return d ? d.slice(0, 4) : '';
     }
-    function rating(item) {
-      return item.vote_average ? item.vote_average.toFixed(1) : '';
+    function itemType(i) {
+      if (i.media_type === 'tv') return 'Series';
+      return i.title ? 'Film' : 'Series';
     }
-    function type(item) {
-      if (item.media_type === 'tv') return 'Series';
-      if (item.media_type === 'movie') return 'Film';
-      return item.title ? 'Film' : 'Series';
+    function itemRating(i) { return i.vote_average ? i.vote_average.toFixed(1) : ''; }
+    function posterSrc(path, size = 'w342') {
+      return path ? `/img/${size}${path}` : null;
     }
 
-    // ── Modal ─────────────────────────────────────────────
-    const backdrop = document.getElementById('modal-backdrop');
+    // ── Player ────────────────────────────────────────────────
+    const playerView = document.getElementById('player-view');
+    const videoEl    = document.getElementById('video');
+    const playerTitle = document.getElementById('player-title');
+    const statusText = document.getElementById('player-status-text');
+    const statusSub  = document.getElementById('player-status-sub');
+    let hlsInstance  = null;
 
-    function openModal(item) {
-      const t = title(item);
-      const y = year(item);
-      const r = rating(item);
-      const tp = type(item);
-      const src = posterSrc(item.poster_path, 'w342');
+    function setStatus(main, sub = '') {
+      statusText.className = main ? 'dots' : '';
+      statusText.textContent = main;
+      statusSub.textContent = sub;
+    }
 
-      const posterEl = document.getElementById('modal-poster');
-      posterEl.innerHTML = src ? `<img src="${src}" alt="${t}">` : '';
+    function openPlayer(item) {
+      const t = itemTitle(item);
+      const y = itemYear(item);
+      const mediaType = item.media_type === 'tv' ? 'series' : 'movie';
 
-      document.getElementById('modal-eyebrow').textContent = `${tp}${y ? ' · ' + y : ''}`;
-      document.getElementById('modal-title').textContent = t;
-
-      const meta = [];
-      if (r) meta.push(`★ ${r}`);
-      if (item.original_language) meta.push(item.original_language.toUpperCase());
-      if (item.genre_ids?.length) meta.push(`${item.genre_ids.length} genres`);
-      document.getElementById('modal-meta').innerHTML = meta.map(m => `<span>${m}</span>`).join('');
-
-      document.getElementById('modal-overview').textContent = item.overview || '';
-      document.getElementById('modal-cmd-text').textContent = `bunx mov-cli  # then search: ${t}`;
-
-      backdrop.classList.add('open');
+      playerTitle.textContent = `${t}${y ? '  ·  ' + y : ''}`;
+      playerView.classList.add('open');
       document.body.style.overflow = 'hidden';
+
+      setStatus('Fetching stream', 'This may take a few seconds while the browser resolves the source');
+      videoEl.style.visibility = 'hidden';
+
+      fetch('/api/streams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: String(item.id),
+          title: t,
+          type: mediaType,
+          year: itemYear(item) ? Number(itemYear(item)) : null,
+          provider: 'cineby',
+        }),
+      })
+        .then(r => r.json())
+        .then(({ streams, error }) => {
+          if (error || !streams?.length) {
+            setStatus('No stream found', error || 'Try searching for a different title or provider.');
+            return;
+          }
+
+          // Pick highest quality
+          const sorted = streams.slice().sort((a, b) => {
+            const rank = q => { const m = q.quality?.match(/(\d+)/); return m ? +m[1] : 0; };
+            return rank(b) - rank(a);
+          });
+          const stream = sorted[0];
+
+          setStatus('');
+          videoEl.style.visibility = 'visible';
+
+          // Build proxied URL for HLS to avoid CORS/Referer issues
+          const proxyUrl = stream.isM3U8
+            ? `/hls-proxy?url=${encodeURIComponent(stream.url)}&referer=${encodeURIComponent(stream.referer || '')}`
+            : stream.url;
+
+          if (stream.isM3U8 && typeof Hls !== 'undefined' && Hls.isSupported()) {
+            if (hlsInstance) hlsInstance.destroy();
+            hlsInstance = new Hls({ enableWorker: false });
+            hlsInstance.loadSource(proxyUrl);
+            hlsInstance.attachMedia(videoEl);
+            hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => videoEl.play().catch(() => {}));
+            hlsInstance.on(Hls.Events.ERROR, (_, data) => {
+              if (data.fatal) setStatus('Playback error', data.details || '');
+            });
+          } else {
+            // Native HLS (Safari) or direct stream
+            videoEl.src = proxyUrl;
+            videoEl.play().catch(() => {});
+          }
+        })
+        .catch(err => {
+          setStatus('Error', String(err));
+        });
     }
 
-    function closeModal() {
-      backdrop.classList.remove('open');
+    function closePlayer() {
+      if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+      videoEl.pause();
+      videoEl.src = '';
+      videoEl.style.visibility = 'hidden';
+      playerView.classList.remove('open');
       document.body.style.overflow = '';
+      setStatus('');
     }
 
-    backdrop.addEventListener('click', e => { if (e.target === backdrop) closeModal(); });
-    document.getElementById('modal-close').addEventListener('click', closeModal);
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+    document.getElementById('player-back').addEventListener('click', closePlayer);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && playerView.classList.contains('open')) closePlayer(); });
 
-    document.getElementById('modal-copy').addEventListener('click', function() {
-      const cmd = 'bunx mov-cli';
-      const btn = this;
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(cmd).then(() => showCopied(btn));
-      } else {
-        // Fallback for non-secure contexts
-        const ta = document.createElement('textarea');
-        ta.value = cmd; ta.style.position = 'fixed'; ta.style.opacity = '0';
-        document.body.appendChild(ta); ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-        showCopied(btn);
-      }
+    // Auto-hide controls after 3 s of no mouse movement
+    let hideTimer;
+    playerView.addEventListener('mousemove', () => {
+      playerView.classList.add('show-ui');
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => playerView.classList.remove('show-ui'), 3000);
     });
 
-    function showCopied(btn) {
-      btn.textContent = 'Copied';
-      btn.classList.add('copied');
-      clearTimeout(btn._t);
-      btn._t = setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
-    }
-
-    function onWatch(item) { openModal(item); }
-
-    // ── Card ──────────────────────────────────────────────
+    // ── Cards ─────────────────────────────────────────────────
     function makeCard(item) {
       const src = posterSrc(item.poster_path);
-      const t = title(item);
-      const y = year(item);
-      const r = rating(item);
+      const t = itemTitle(item);
+      const y = itemYear(item);
+      const r = itemRating(item);
 
       const card = document.createElement('div');
       card.className = 'card';
@@ -583,19 +445,19 @@
           <div class="card-title">${t}</div>
           <div class="card-sub">
             ${y ? `<span>${y}</span>` : ''}
-            ${r ? `<span class="card-rating">${r}</span>` : ''}
+            ${r ? `<span>${r}</span>` : ''}
           </div>
         </div>`;
-      card.addEventListener('click', () => onWatch(item));
+      card.addEventListener('click', () => openPlayer(item));
       return card;
     }
 
-    // ── Hero ──────────────────────────────────────────────
+    // ── Hero ──────────────────────────────────────────────────
     function renderHero(item) {
-      const t = title(item);
-      const y = year(item);
-      const r = rating(item);
-      const tp = type(item);
+      const t = itemTitle(item);
+      const y = itemYear(item);
+      const r = itemRating(item);
+      const tp = itemType(item);
       const poster = posterSrc(item.poster_path, 'w500');
 
       const div = document.createElement('div');
@@ -613,26 +475,24 @@
             ${item.original_language ? `<span>${item.original_language.toUpperCase()}</span>` : ''}
           </div>
           ${item.overview ? `<p class="hero-overview">${item.overview}</p>` : ''}
-          <button class="watch-btn" id="hero-watch-btn">
+          <button class="watch-btn" id="hero-btn">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
               <polygon points="5,3 19,12 5,21"/>
             </svg>
             Watch
           </button>
         </div>`;
-      div.querySelector('#hero-watch-btn').addEventListener('click', () => onWatch(item));
+      div.querySelector('#hero-btn').addEventListener('click', () => openPlayer(item));
       return div;
     }
 
-    // ── Render row/grid of cards ──────────────────────────
     function makeGrid(items, cls = 'grid') {
       const el = document.createElement('div');
       el.className = cls;
-      items.forEach(item => el.appendChild(makeCard(item)));
+      items.forEach(i => el.appendChild(makeCard(i)));
       return el;
     }
 
-    // ── Section wrapper ───────────────────────────────────
     function makeSection(label, content) {
       const sec = document.createElement('div');
       sec.className = 'section';
@@ -641,38 +501,31 @@
       return sec;
     }
 
-    // ── Home view ─────────────────────────────────────────
+    // ── Home ──────────────────────────────────────────────────
     function renderHome(trending) {
       const main = document.getElementById('main');
       main.innerHTML = '';
 
-      const featured = trending[0];
-      const rest = trending.slice(1);
-      const films = rest.filter(i => i.media_type !== 'tv');
+      const [featured, ...rest] = trending;
+      const films  = rest.filter(i => i.media_type !== 'tv');
       const series = rest.filter(i => i.media_type === 'tv');
 
-      // Hero
       if (featured) main.appendChild(renderHero(featured));
 
-      const div1 = document.createElement('div'); div1.className = 'divider';
-      main.appendChild(div1);
-
+      const d1 = document.createElement('div'); d1.className = 'divider'; main.appendChild(d1);
       main.appendChild(makeSection('Trending', makeGrid(rest.slice(0, 12), 'grid')));
 
-      if (films.length > 0) {
-        const div2 = document.createElement('div'); div2.className = 'divider';
-        main.appendChild(div2);
+      if (films.length) {
+        const d2 = document.createElement('div'); d2.className = 'divider'; main.appendChild(d2);
         main.appendChild(makeSection('Films', makeGrid(films.slice(0, 7), 'row')));
       }
-
-      if (series.length > 0) {
-        const div3 = document.createElement('div'); div3.className = 'divider';
-        main.appendChild(div3);
+      if (series.length) {
+        const d3 = document.createElement('div'); d3.className = 'divider'; main.appendChild(d3);
         main.appendChild(makeSection('Series', makeGrid(series.slice(0, 7), 'row')));
       }
     }
 
-    // ── Search view ───────────────────────────────────────
+    // ── Search ────────────────────────────────────────────────
     function renderSearch(results, query) {
       const main = document.getElementById('main');
       main.innerHTML = '';
@@ -689,19 +542,18 @@
       });
       main.appendChild(bar);
 
-      if (results.length === 0) {
-        const empty = document.createElement('div');
-        empty.className = 'empty';
-        empty.textContent = 'No results found';
-        main.appendChild(empty);
+      if (!results.length) {
+        const e = document.createElement('div'); e.className = 'empty'; e.textContent = 'No results';
+        main.appendChild(e);
         return;
       }
 
-      main.appendChild(makeGrid(results, 'grid section'));
-      main.querySelector('.section').style.paddingTop = '0';
+      const grid = makeGrid(results, 'grid section');
+      grid.style.paddingTop = '0';
+      main.appendChild(grid);
     }
 
-    // ── Data fetching ─────────────────────────────────────
+    // ── Data ──────────────────────────────────────────────────
     async function apiFetch(path) {
       const r = await fetch('/api' + path);
       if (!r.ok) throw new Error('API error');
@@ -709,11 +561,10 @@
     }
 
     async function loadHome() {
-      document.getElementById('main').innerHTML = '<div class="loading">Loading…</div>';
+      document.getElementById('main').innerHTML = '<div class="loading">Loading</div>';
       try {
         const data = await apiFetch('/trending/all/week');
-        const items = (data.results || []).filter(i => i.media_type !== 'person');
-        renderHome(items);
+        renderHome((data.results || []).filter(i => i.media_type !== 'person'));
       } catch {
         document.getElementById('main').innerHTML = '<div class="empty">Could not load content</div>';
       }
@@ -725,11 +576,10 @@
       const q = e.target.value.trim();
       if (!q) { loadHome(); return; }
       searchTimer = setTimeout(async () => {
-        document.getElementById('main').innerHTML = '<div class="loading">Searching…</div>';
+        document.getElementById('main').innerHTML = '<div class="loading">Searching</div>';
         try {
           const data = await apiFetch(`/search/multi?query=${encodeURIComponent(q)}&language=en`);
-          const results = (data.results || []).filter(i => i.media_type !== 'person');
-          renderSearch(results, q);
+          renderSearch((data.results || []).filter(i => i.media_type !== 'person'), q);
         } catch {
           document.getElementById('main').innerHTML = '<div class="empty">Search failed</div>';
         }
