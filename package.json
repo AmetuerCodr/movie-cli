@@ -14,10 +14,12 @@
   ],
   "scripts": {
     "dev": "bun run src/index.ts",
+    "web": "bun run src/web/server.ts",
     "build": "bun build src/index.ts --outdir dist --target node --format esm --sourcemap --external playwright --external playwright-core --external chromium-bidi",
     "build:bun": "bun build src/index.ts --outdir dist --target bun --format esm --external playwright --external playwright-core --external chromium-bidi",
     "prepublishOnly": "bun run build",
-    "lint": "bunx tsc --noEmit"
+    "lint": "bunx tsc --noEmit",
+    "test": "bun test tests/"
   },
   "dependencies": {
     "@cliqz/adblocker-playwright": "^1.28.0",
