@@ -239,6 +239,7 @@
     #player-status-sub {
       font-size: 0.65rem; color: rgba(255,255,255,0.2);
       letter-spacing: 0.1em; max-width: 360px; text-align: center;
+      white-space: pre-line;
     }
 
     /* animated dots */
@@ -360,8 +361,15 @@
       })
         .then(r => r.json())
         .then(({ streams, error }) => {
+          if (error?.includes('BROWSER_LAUNCH_FAILED')) {
+            setStatus(
+              'Browser not installed',
+              'Run this once in your terminal, then restart the server:\n\nbunx playwright install chromium'
+            );
+            return;
+          }
           if (error || !streams?.length) {
-            setStatus('No stream found', error || 'Try searching for a different title or provider.');
+            setStatus('No stream found', error || 'Try a different title — not all content is available on every provider.');
             return;
           }
 

@@ -45,11 +45,27 @@ async function proxyTmdb(path: string): Promise<unknown> {
 
 // ── Browser lifecycle ────────────────────────────────────────
 let browserReady = false;
+let browserError: string | null = null;
+
 async function ensureBrowser(): Promise<void> {
-  if (!browserReady) {
+  if (browserReady) return;
+  if (browserError) throw new Error(browserError);
+
+  try {
     logger.debug("Initialising headless browser for stream extraction…");
     await browserManager.init(true);
     browserReady = true;
+  } catch (err) {
+    const msg = String(err);
+    // Distill the most actionable part of Playwright launch errors.
+    if (msg.includes("Timeout") || msg.includes("launch")) {
+      browserError =
+        "BROWSER_LAUNCH_FAILED: Playwright could not start the headless browser. " +
+        "Run: bunx playwright install chromium";
+    } else {
+      browserError = msg;
+    }
+    throw new Error(browserError);
   }
 }
 
