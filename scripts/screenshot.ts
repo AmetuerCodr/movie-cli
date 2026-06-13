@@ -45,9 +45,22 @@ console.log("✓ screenshot-home.png");
 await page.screenshot({ path: join(OUT, "screenshot-full.png"), fullPage: true });
 console.log("✓ screenshot-full.png");
 
+// ── Modal (click first trending card) ────────────────────
+const firstCard = await page.locator(".grid .card").first();
+await firstCard.click();
+await page.waitForSelector("#modal-backdrop.open", { timeout: 5_000 });
+await waitForImages(10_000).catch(() => {});
+await page.waitForTimeout(300);
+
+await page.screenshot({ path: join(OUT, "screenshot-modal.png") });
+console.log("✓ screenshot-modal.png");
+
+// close modal
+await page.keyboard.press("Escape");
+await page.waitForTimeout(200);
+
 // ── Search ────────────────────────────────────────────────
 await page.fill("#search-input", "inception");
-// Wait for search results view (which has the .search-bar header + grid)
 await page.waitForSelector(".search-bar", { timeout: 15_000 });
 await page.waitForSelector(".grid .card", { timeout: 10_000 });
 await waitForImages(25_000).catch(() => console.log("  (some search images still pending)"));

@@ -292,6 +292,129 @@
       margin: 0 40px 48px;
     }
 
+    /* ── Modal ──────────────────────────────────────────── */
+    #modal-backdrop {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,0.85);
+      display: flex; align-items: center; justify-content: center;
+      padding: 32px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    #modal-backdrop.open { opacity: 1; pointer-events: all; }
+
+    #modal {
+      background: #1c1c1c;
+      max-width: 760px; width: 100%;
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 0;
+      transform: translateY(12px);
+      transition: transform 0.25s;
+      max-height: calc(100vh - 64px);
+      overflow: hidden;
+    }
+
+    #modal-backdrop.open #modal { transform: translateY(0); }
+
+    .modal-poster {
+      background: #111;
+      aspect-ratio: 2/3;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .modal-poster img {
+      width: 100%; height: 100%;
+      object-fit: cover; display: block;
+    }
+
+    .modal-body {
+      padding: 36px 32px 32px;
+      display: flex; flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .modal-close {
+      align-self: flex-end;
+      background: none; border: none; cursor: pointer;
+      color: rgba(255,255,255,0.3);
+      font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase;
+      padding: 0; margin-bottom: 24px;
+      transition: color 0.15s;
+    }
+
+    .modal-close:hover { color: #fff; }
+
+    .modal-eyebrow {
+      font-size: 0.62rem; letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+      margin-bottom: 10px;
+    }
+
+    .modal-title {
+      font-size: 1.6rem; font-weight: 300;
+      letter-spacing: -0.01em; line-height: 1.2;
+      margin-bottom: 12px;
+    }
+
+    .modal-meta {
+      font-size: 0.68rem; color: rgba(255,255,255,0.3);
+      letter-spacing: 0.08em;
+      display: flex; gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .modal-overview {
+      font-size: 0.78rem; line-height: 1.7;
+      color: rgba(255,255,255,0.45);
+      margin-bottom: 28px;
+      flex: 1;
+    }
+
+    .modal-cmd-label {
+      font-size: 0.62rem; letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.25);
+      margin-bottom: 10px;
+    }
+
+    .modal-cmd {
+      display: flex; align-items: center;
+      gap: 0;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .modal-cmd code {
+      font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.75);
+      padding: 12px 16px;
+      flex: 1;
+      letter-spacing: 0.04em;
+    }
+
+    .modal-copy {
+      background: none; border: none;
+      border-left: 1px solid rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.35);
+      font-size: 0.62rem; letter-spacing: 0.15em; text-transform: uppercase;
+      padding: 0 16px; height: 44px;
+      cursor: pointer; white-space: nowrap;
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .modal-copy:hover { color: #fff; background: rgba(255,255,255,0.05); }
+    .modal-copy.copied { color: #fff; }
+
+    @media (max-width: 600px) {
+      #modal { grid-template-columns: 1fr; }
+      .modal-poster { display: none; }
+      #modal-backdrop { padding: 16px; align-items: flex-end; }
+    }
+
     /* ── Responsive ─────────────────────────────────────── */
     @media (max-width: 900px) {
       nav { padding: 20px 24px; }
@@ -328,7 +451,25 @@
   <!-- Main -->
   <main id="main"></main>
 
-  <div id="toast"></div>
+  <!-- Modal -->
+  <div id="modal-backdrop">
+    <div id="modal">
+      <div class="modal-poster" id="modal-poster"></div>
+      <div class="modal-body">
+        <button class="modal-close" id="modal-close">Close</button>
+        <div class="modal-eyebrow" id="modal-eyebrow"></div>
+        <div class="modal-title" id="modal-title"></div>
+        <div class="modal-meta" id="modal-meta"></div>
+        <p class="modal-overview" id="modal-overview"></p>
+        <div class="modal-cmd-label">Run in terminal</div>
+        <div class="modal-cmd">
+          <code id="modal-cmd-text">bunx mov-cli</code>
+          <button class="modal-copy" id="modal-copy">Copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 
   <script>
     const IMG_BASE = '/img';
@@ -355,19 +496,68 @@
       return item.title ? 'Film' : 'Series';
     }
 
-    // ── Toast ─────────────────────────────────────────────
-    function toast(msg) {
-      const el = document.getElementById('toast');
-      el.textContent = msg;
-      el.classList.add('show');
-      clearTimeout(el._t);
-      el._t = setTimeout(() => el.classList.remove('show'), 3500);
+    // ── Modal ─────────────────────────────────────────────
+    const backdrop = document.getElementById('modal-backdrop');
+
+    function openModal(item) {
+      const t = title(item);
+      const y = year(item);
+      const r = rating(item);
+      const tp = type(item);
+      const src = posterSrc(item.poster_path, 'w342');
+
+      const posterEl = document.getElementById('modal-poster');
+      posterEl.innerHTML = src ? `<img src="${src}" alt="${t}">` : '';
+
+      document.getElementById('modal-eyebrow').textContent = `${tp}${y ? ' · ' + y : ''}`;
+      document.getElementById('modal-title').textContent = t;
+
+      const meta = [];
+      if (r) meta.push(`★ ${r}`);
+      if (item.original_language) meta.push(item.original_language.toUpperCase());
+      if (item.genre_ids?.length) meta.push(`${item.genre_ids.length} genres`);
+      document.getElementById('modal-meta').innerHTML = meta.map(m => `<span>${m}</span>`).join('');
+
+      document.getElementById('modal-overview').textContent = item.overview || '';
+      document.getElementById('modal-cmd-text').textContent = `bunx mov-cli  # then search: ${t}`;
+
+      backdrop.classList.add('open');
+      document.body.style.overflow = 'hidden';
     }
 
-    function onWatch(item) {
-      navigator.clipboard?.writeText('bunx mov-cli');
-      toast(`Copied  ·  search "${title(item)}" in your terminal`);
+    function closeModal() {
+      backdrop.classList.remove('open');
+      document.body.style.overflow = '';
     }
+
+    backdrop.addEventListener('click', e => { if (e.target === backdrop) closeModal(); });
+    document.getElementById('modal-close').addEventListener('click', closeModal);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    document.getElementById('modal-copy').addEventListener('click', function() {
+      const cmd = 'bunx mov-cli';
+      const btn = this;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(cmd).then(() => showCopied(btn));
+      } else {
+        // Fallback for non-secure contexts
+        const ta = document.createElement('textarea');
+        ta.value = cmd; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showCopied(btn);
+      }
+    });
+
+    function showCopied(btn) {
+      btn.textContent = 'Copied';
+      btn.classList.add('copied');
+      clearTimeout(btn._t);
+      btn._t = setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+    }
+
+    function onWatch(item) { openModal(item); }
 
     // ── Card ──────────────────────────────────────────────
     function makeCard(item) {
