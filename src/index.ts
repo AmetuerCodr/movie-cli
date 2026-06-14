@@ -27,6 +27,12 @@ async function main(): Promise<void> {
       default: "best",
       describe: "Preferred quality (best, 1080p, 720p, 480p)",
     })
+    .option("browser", {
+      alias: "b",
+      type: "boolean",
+      default: false,
+      describe: "Open streams in your system browser instead of a media player",
+    })
     .option("headless", {
       type: "boolean",
       default: true,
@@ -64,6 +70,7 @@ async function main(): Promise<void> {
     quality: argv.quality as string,
     headless: argv.headless as boolean,
     debug: argv.debug as boolean,
+    browser: argv.browser as boolean,
     listPlayers: argv["list-players"] as boolean,
     listProviders: argv["list-providers"] as boolean,
   };

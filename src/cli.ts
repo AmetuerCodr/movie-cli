@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { browserManager } from "./browser/index.js";
 import {
   getStreamsWithFallback,
@@ -31,6 +32,7 @@ export interface CliOptions {
   quality: string;
   headless: boolean;
   debug: boolean;
+  browser: boolean;
   listPlayers: boolean;
   listProviders: boolean;
 }
@@ -47,15 +49,21 @@ export async function cli(opts: CliOptions): Promise<void> {
 
   console.log(banner());
 
-  // Resolve the player up front so we fail fast with a friendly message.
-  const player = await detectPlayer(opts.player).catch((err: unknown) => {
-    if (err instanceof PlayerError) {
-      console.error(`\n${c.dim(err.message)}\n`);
-      process.exit(1);
-    }
-    throw err;
-  });
-  logger.debug("Using player:", player.name);
+  // In browser mode we skip player detection entirely — streams open in the
+  // user's default system browser instead.
+  let player: PlayerConfig | null = null;
+  if (!opts.browser) {
+    player = await detectPlayer(opts.player).catch((err: unknown) => {
+      if (err instanceof PlayerError) {
+        console.error(`\n${c.dim(err.message)}\n`);
+        process.exit(1);
+      }
+      throw err;
+    }) as PlayerConfig;
+    logger.debug("Using player:", player.name);
+  } else {
+    logger.debug("Browser mode: streams will open in your default browser");
+  }
 
   // Persist non-default preferences for next time.
   await writeConfig({ provider: opts.provider, quality: opts.quality });
@@ -71,7 +79,7 @@ export async function cli(opts: CliOptions): Promise<void> {
   }
 }
 
-async function interactiveLoop(opts: CliOptions, player: PlayerConfig): Promise<void> {
+async function interactiveLoop(opts: CliOptions, player: PlayerConfig | null): Promise<void> {
   let running = true;
   while (running) {
     const query = await promptSearch();
@@ -109,19 +117,38 @@ async function interactiveLoop(opts: CliOptions, player: PlayerConfig): Promise<
     const stream = await selectStream(streams, opts.quality);
     const title = `${choice.title}${choice.year ? ` (${choice.year})` : ""}`;
 
-    console.log(`\n${c.accent("▶")} Opening ${c.title(title)} in ${c.ok(player.name)}…`);
-    console.log(c.dim("  (close the player window to return here)\n"));
-
-    try {
-      await playStream(player, stream, title);
-    } catch (err) {
-      logger.error("Player exited unexpectedly.");
-      logger.debug(err);
+    if (opts.browser || player === null) {
+      console.log(`\n${c.accent("▶")} Opening ${c.title(title)} in your browser…`);
+      console.log(c.dim(`  ${stream.url}\n`));
+      openInBrowser(stream.url);
+    } else {
+      console.log(`\n${c.accent("▶")} Opening ${c.title(title)} in ${c.ok(player.name)}…`);
+      console.log(c.dim("  (close the player window to return here)\n"));
+      try {
+        await playStream(player, stream, title);
+      } catch (err) {
+        logger.error("Player exited unexpectedly.");
+        logger.debug(err);
+      }
     }
 
     const next = await promptContinue();
     running = next === "search";
   }
+}
+
+/**
+ * Open a URL in the user's default system browser.
+ * Uses `open` on macOS, `xdg-open` on Linux, `start` on Windows.
+ */
+function openInBrowser(url: string): void {
+  const cmd =
+    process.platform === "darwin"
+      ? "open"
+      : process.platform === "win32"
+        ? "start"
+        : "xdg-open";
+  spawnSync(cmd, [url], { stdio: "ignore" });
 }
 
 /**

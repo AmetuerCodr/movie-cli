@@ -1,6 +1,6 @@
 import chalk from "chalk";
 
-const VERSION = "0.1.0";
+const VERSION = "0.3.0";
 
 // Simple two-stop gradient (blue #3b82f6 → purple #a855f7) applied per line.
 const START = { r: 0x3b, g: 0x82, b: 0xf6 };
