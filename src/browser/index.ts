@@ -13,6 +13,14 @@ const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
   "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
+// Playwright sends "HeadlessChrome" in sec-ch-ua at the HTTP level before any
+// JS stealth patches run. Override all Client Hints headers in every context.
+const CH_UA_HEADERS: Record<string, string> = {
+  "sec-ch-ua": '"Not/A)Brand";v="8", "Chromium";v="124", "Google Chrome";v="124"',
+  "sec-ch-ua-mobile": "?0",
+  "sec-ch-ua-platform": '"Windows"',
+};
+
 /**
  * Singleton wrapper around a Playwright Chromium browser with ad blocking
  * baked into every page it hands out.
@@ -54,6 +62,7 @@ export class BrowserManager {
       viewport: { width: 1280, height: 720 },
       locale: "en-US",
       timezoneId: "America/New_York",
+      extraHTTPHeaders: CH_UA_HEADERS,
     });
     const page = await context.newPage();
     await applyAdblock(page, streamSink);
@@ -74,6 +83,7 @@ export class BrowserManager {
       viewport: { width: 1280, height: 720 },
       locale: "en-US",
       timezoneId: "America/New_York",
+      extraHTTPHeaders: CH_UA_HEADERS,
     });
     const page = await context.newPage();
     await applyLightCapture(page, streamSink);
