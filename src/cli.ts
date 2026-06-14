@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import { browserManager } from "./browser/index.js";
 import {
   getStreamsWithFallback,
@@ -68,7 +67,9 @@ export async function cli(opts: CliOptions): Promise<void> {
   // Persist non-default preferences for next time.
   await writeConfig({ provider: opts.provider, quality: opts.quality });
 
-  await withSpinner("Starting browser…", () => browserManager.init(opts.headless), {
+  // Browser mode keeps Playwright visible so the user watches in it.
+  const headless = opts.browser ? false : opts.headless;
+  await withSpinner("Starting browser…", () => browserManager.init(headless), {
     fail: "Failed to start browser",
   });
 
@@ -102,30 +103,40 @@ async function interactiveLoop(opts: CliOptions, player: PlayerConfig | null): P
     if (choice === "quit") return;
     if (choice === "back") continue;
 
-    const streams = await withSpinner(
-      "Fetching stream sources…",
-      () => getStreamsWithFallback(opts.provider, choice),
-      { fail: "Could not fetch streams" },
-    );
-
-    if (streams.length === 0) {
-      console.log(c.dim("\nNo playable streams found for this title (all providers tried)."));
-      if (await promptRetry("Search for something else?")) continue;
-      return;
-    }
-
-    const stream = await selectStream(streams, opts.quality);
     const title = `${choice.title}${choice.year ? ` (${choice.year})` : ""}`;
 
-    if (opts.browser || player === null) {
-      console.log(`\n${c.accent("▶")} Opening ${c.title(title)} in your browser…`);
-      console.log(c.dim(`  ${stream.url}\n`));
-      openInBrowser(stream.url);
+    if (opts.browser) {
+      // Open the embed player page in the already-running non-headless Playwright
+      // browser. The same Chromium session carries cookies + session tokens so
+      // CDN hotlink protection (e.g. goldweather.net) cannot block the request.
+      const embedUrl = getEmbedUrl(choice);
+      console.log(`\n${c.accent("▶")} Opening ${c.title(title)} in Chromium…`);
+      console.log(c.dim(`  ${embedUrl}`));
+      console.log(c.dim("  (return to this terminal when done)\n"));
+      const page = await browserManager.newRawPage([]);
+      await page.goto(embedUrl, { waitUntil: "domcontentloaded", timeout: 30_000 }).catch((e) => {
+        logger.debug("Browser page nav failed:", e);
+      });
+      // Page stays open; browserManager.close() handles cleanup on exit.
     } else {
-      console.log(`\n${c.accent("▶")} Opening ${c.title(title)} in ${c.ok(player.name)}…`);
+      const streams = await withSpinner(
+        "Fetching stream sources…",
+        () => getStreamsWithFallback(opts.provider, choice),
+        { fail: "Could not fetch streams" },
+      );
+
+      if (streams.length === 0) {
+        console.log(c.dim("\nNo playable streams found for this title (all providers tried)."));
+        if (await promptRetry("Search for something else?")) continue;
+        return;
+      }
+
+      const stream = await selectStream(streams, opts.quality);
+
+      console.log(`\n${c.accent("▶")} Opening ${c.title(title)} in ${c.ok(player!.name)}…`);
       console.log(c.dim("  (close the player window to return here)\n"));
       try {
-        await playStream(player, stream, title);
+        await playStream(player!, stream, title);
       } catch (err) {
         logger.error("Player exited unexpectedly.");
         logger.debug(err);
@@ -138,17 +149,20 @@ async function interactiveLoop(opts: CliOptions, player: PlayerConfig | null): P
 }
 
 /**
- * Open a URL in the user's default system browser.
- * Uses `open` on macOS, `xdg-open` on Linux, `start` on Windows.
+ * Return the embed player URL for a given search result.
+ * cineby → player.videasy.to, vidsrc/others → embed.su
  */
-function openInBrowser(url: string): void {
-  const cmd =
-    process.platform === "darwin"
-      ? "open"
-      : process.platform === "win32"
-        ? "start"
-        : "xdg-open";
-  spawnSync(cmd, [url], { stdio: "ignore" });
+function getEmbedUrl(result: import("./scraper/types.js").SearchResult): string {
+  const { id, type, provider } = result;
+  const isSeries = type === "series";
+  if (provider === "cineby") {
+    return isSeries
+      ? `https://player.videasy.to/tv/${id}/1/1`
+      : `https://player.videasy.to/movie/${id}`;
+  }
+  return isSeries
+    ? `https://embed.su/embed/tv/${id}/1/1`
+    : `https://embed.su/embed/movie/${id}`;
 }
 
 /**
