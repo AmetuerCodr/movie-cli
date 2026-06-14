@@ -188,35 +188,76 @@ function buildHtml(title: string, src: string): string {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  body{background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;color:#fff}
-  h1{font-size:1rem;opacity:.6;margin-bottom:.5rem;text-align:center;padding:0 1rem}
-  video{width:100vw;max-height:100vh;outline:none}
+  body{background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;color:#fff;overflow:hidden}
+  video{width:100vw;height:100vh;object-fit:contain;outline:none;cursor:pointer}
+  #overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.7);z-index:10;cursor:pointer}
+  #overlay svg{width:80px;height:80px;opacity:.9}
+  #overlay h1{font-size:1.1rem;margin-top:1rem;opacity:.8;text-align:center;padding:0 1.5rem;max-width:600px}
+  #overlay p{font-size:.8rem;margin-top:.5rem;opacity:.5}
+  #err{position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);background:#c00;color:#fff;padding:.5rem 1rem;border-radius:6px;font-size:.85rem;display:none;z-index:20;max-width:90vw;text-align:center}
 </style>
 </head>
 <body>
-<h1>${escHtml(title)}</h1>
-<video id="v" controls autoplay playsinline></video>
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
+<div id="overlay">
+  <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="40" cy="40" r="38" fill="rgba(255,255,255,0.15)" stroke="white" stroke-width="2"/>
+    <polygon points="32,22 62,40 32,58" fill="white"/>
+  </svg>
+  <h1>${escHtml(title)}</h1>
+  <p>Click to play</p>
+</div>
+<div id="err"></div>
+<video id="v" controls playsinline></video>
+
 <script>
-const video = document.getElementById('v');
-const src = ${JSON.stringify(src)};
-function play() {
-  if (Hls.isSupported()) {
-    const hls = new Hls({ enableWorker: true });
-    hls.loadSource(src);
-    hls.attachMedia(video);
-    hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
-    hls.on(Hls.Events.ERROR, (_, d) => {
-      if (d.fatal) console.error('HLS fatal', d.type, d.details);
-    });
-  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    video.src = src;
-    video.play().catch(() => {});
-  } else {
-    document.body.innerHTML = '<p style="color:red;padding:2rem">HLS not supported in this browser. Try Chrome or Firefox.</p>';
+(function() {
+  var video = document.getElementById('v');
+  var overlay = document.getElementById('overlay');
+  var errBox = document.getElementById('err');
+  var src = ${JSON.stringify(src)};
+  var hls;
+
+  function showErr(msg) {
+    errBox.textContent = msg;
+    errBox.style.display = 'block';
+    setTimeout(function(){ errBox.style.display = 'none'; }, 8000);
   }
-}
-play();
+
+  function setupHls() {
+    if (typeof Hls === 'undefined') { showErr('HLS.js failed to load — check your internet connection.'); return; }
+    if (Hls.isSupported()) {
+      hls = new Hls({ enableWorker: true, lowLatencyMode: false });
+      hls.loadSource(src);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.ERROR, function(_, d) {
+        if (d.fatal) showErr('Stream error: ' + d.details + ' (' + d.type + ')');
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = src;
+    } else {
+      showErr('HLS not supported. Use Chrome or Firefox.');
+    }
+  }
+
+  function startPlay() {
+    overlay.style.display = 'none';
+    video.play().catch(function(e) { showErr('Playback error: ' + e.message); });
+  }
+
+  overlay.addEventListener('click', startPlay);
+  video.addEventListener('click', function() {
+    if (video.paused) video.play().catch(function(){});
+    else video.pause();
+  });
+  video.addEventListener('playing', function() { overlay.style.display = 'none'; });
+
+  // Load HLS.js from CDN, then init
+  var s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js';
+  s.onload = setupHls;
+  s.onerror = function() { showErr('Failed to load HLS.js — check internet.'); };
+  document.head.appendChild(s);
+})();
 </script>
 </body>
 </html>`;
