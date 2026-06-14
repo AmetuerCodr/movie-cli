@@ -1,6 +1,6 @@
 {
   "name": "@gadgetguy/mov-cli",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Watch movies from the terminal — ani-cli for movies",
   "license": "MIT",
   "type": "module",
