@@ -1,4 +1,6 @@
+import { spawnSync } from "node:child_process";
 import { browserManager } from "./browser/index.js";
+import { startProxyServer } from "./browser/proxy.js";
 import {
   getStreamsWithFallback,
   listProviders,
@@ -67,9 +69,7 @@ export async function cli(opts: CliOptions): Promise<void> {
   // Persist non-default preferences for next time.
   await writeConfig({ provider: opts.provider, quality: opts.quality });
 
-  // Browser mode keeps Playwright visible so the user watches in it.
-  const headless = opts.browser ? false : opts.headless;
-  await withSpinner("Starting browser…", () => browserManager.init(headless), {
+  await withSpinner("Starting browser…", () => browserManager.init(opts.headless), {
     fail: "Failed to start browser",
   });
 
@@ -105,34 +105,40 @@ async function interactiveLoop(opts: CliOptions, player: PlayerConfig | null): P
 
     const title = `${choice.title}${choice.year ? ` (${choice.year})` : ""}`;
 
+    const streams = await withSpinner(
+      "Fetching stream sources…",
+      () => getStreamsWithFallback(opts.provider, choice),
+      { fail: "Could not fetch streams" },
+    );
+
+    if (streams.length === 0) {
+      console.log(c.dim("\nNo playable streams found for this title (all providers tried)."));
+      if (await promptRetry("Search for something else?")) continue;
+      return;
+    }
+
+    const stream = await selectStream(streams, opts.quality);
+
     if (opts.browser) {
-      // Open the embed player page in the already-running non-headless Playwright
-      // browser. The same Chromium session carries cookies + session tokens so
-      // CDN hotlink protection (e.g. goldweather.net) cannot block the request.
-      const embedUrl = getEmbedUrl(choice);
-      console.log(`\n${c.accent("▶")} Opening ${c.title(title)} in Chromium…`);
-      console.log(c.dim(`  ${embedUrl}`));
-      console.log(c.dim("  (return to this terminal when done)\n"));
-      const page = await browserManager.newRawPage([]);
-      await page.goto(embedUrl, { waitUntil: "domcontentloaded", timeout: 30_000 }).catch((e) => {
-        logger.debug("Browser page nav failed:", e);
-      });
-      // Page stays open; browserManager.close() handles cleanup on exit.
-    } else {
-      const streams = await withSpinner(
-        "Fetching stream sources…",
-        () => getStreamsWithFallback(opts.provider, choice),
-        { fail: "Could not fetch streams" },
+      // Start a local HLS proxy so the browser can request CDN segments with
+      // the correct Referer header — direct CDN URLs (goldweather.net etc.)
+      // are blocked without it.
+      const proxy = await withSpinner(
+        "Starting local player…",
+        () => startProxyServer(stream, title),
+        { fail: "Could not start local player" },
       );
 
-      if (streams.length === 0) {
-        console.log(c.dim("\nNo playable streams found for this title (all providers tried)."));
-        if (await promptRetry("Search for something else?")) continue;
-        return;
-      }
+      console.log(`\n${c.accent("▶")} Opening ${c.title(title)} in your browser…`);
+      console.log(c.dim(`  ${proxy.url}\n`));
+      openBrowser(proxy.url);
 
-      const stream = await selectStream(streams, opts.quality);
-
+      // Wait for user to finish watching, then clean up.
+      const next = await promptContinue();
+      await proxy.close().catch(() => {});
+      running = next === "search";
+      continue;
+    } else {
       console.log(`\n${c.accent("▶")} Opening ${c.title(title)} in ${c.ok(player!.name)}…`);
       console.log(c.dim("  (close the player window to return here)\n"));
       try {
@@ -148,21 +154,11 @@ async function interactiveLoop(opts: CliOptions, player: PlayerConfig | null): P
   }
 }
 
-/**
- * Return the embed player URL for a given search result.
- * cineby → player.videasy.to, vidsrc/others → embed.su
- */
-function getEmbedUrl(result: import("./scraper/types.js").SearchResult): string {
-  const { id, type, provider } = result;
-  const isSeries = type === "series";
-  if (provider === "cineby") {
-    return isSeries
-      ? `https://player.videasy.to/tv/${id}/1/1`
-      : `https://player.videasy.to/movie/${id}`;
-  }
-  return isSeries
-    ? `https://embed.su/embed/tv/${id}/1/1`
-    : `https://embed.su/embed/movie/${id}`;
+/** Open a localhost URL in the system's default browser. */
+function openBrowser(url: string): void {
+  const cmd =
+    process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
+  spawnSync(cmd, [url], { stdio: "ignore" });
 }
 
 /**
