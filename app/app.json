@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "Movie",
+    "slug": "movie-app",
+    "version": "0.1.0",
+    "scheme": "movieapp",
+    "orientation": "default",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#000000"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.gadgetguy.movieapp",
+      "infoPlist": {
+        "UIViewControllerBasedStatusBarAppearance": false,
+        "NSAppTransportSecurity": { "NSAllowsArbitraryLoads": true }
+      }
+    },
+    "android": {
+      "package": "com.gadgetguy.movieapp"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-video",
+        {
+          "supportsBackgroundPlayback": true,
+          "supportsPictureInPicture": true
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

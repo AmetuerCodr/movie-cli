@@ -15,6 +15,30 @@
 runtime. Search for a movie, pick a result, choose a quality, and it opens the
 stream in your local media player (mpv, VLC, or IINA) — no browser tabs, no ads.
 
+## 📱 Now also a full app
+
+This repo is migrating from a CLI to a full **Expo app** (iOS / iPadOS / web)
+with a Liquid Glass interface, categories, a personalized recommendation feed,
+and series/episode browsing — while keeping the CLI working.
+
+```
+movie-cli/
+  src/                 shared scraper + the original CLI
+  supabase/functions/  hosted API: tmdb · streams · proxy  (Deno edge functions)
+  extractor/           hosted Playwright stream-extraction worker (Docker)
+  app/                 the Expo app  (see app/README.md)
+```
+
+Because a phone can't run a headless browser, the architecture is fully hosted:
+the **Expo app** calls **Supabase Edge Functions**, which call a small **hosted
+extractor** that reuses this repo's Playwright scraper. The app works anywhere
+with no dependency on your laptop.
+
+- App setup & run: [`app/README.md`](./app/README.md)
+- Backend/extractor deploy ($0 hosting options): [`extractor/README.md`](./extractor/README.md)
+
+The CLI documentation below still applies to the `mov-cli` command.
+
 ## Demo
 
 > Demo GIF coming soon
