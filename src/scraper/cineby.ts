@@ -35,7 +35,9 @@ export const cinebyProvider: Provider = {
 
 function playerUrl(result: SearchResult): string {
   if (result.type === "series") {
-    return `${PLAYER_BASE}/tv/${result.id}/1/1`;
+    const season = result.season ?? 1;
+    const episode = result.episode ?? 1;
+    return `${PLAYER_BASE}/tv/${result.id}/${season}/${episode}`;
   }
   return `${PLAYER_BASE}/movie/${result.id}`;
 }

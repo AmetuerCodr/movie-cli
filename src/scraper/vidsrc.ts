@@ -42,7 +42,7 @@ async function tryEmbed(base: string, result: SearchResult): Promise<Stream[]> {
   const page = await browserManager.newRawPage(sink);
   const embedUrl =
     result.type === "series"
-      ? `${base}/tv/${result.id}/1/1`
+      ? `${base}/tv/${result.id}/${result.season ?? 1}/${result.episode ?? 1}`
       : `${base}/movie/${result.id}`;
   try {
     logger.debug("Opening embed:", embedUrl);

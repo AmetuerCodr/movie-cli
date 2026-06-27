@@ -9,6 +9,10 @@ export interface SearchResult {
   /** Poster image URL, or null. */
   poster: string | null;
   provider: string;
+  /** For series: season number to stream. Defaults to 1 when omitted. */
+  season?: number;
+  /** For series: episode number to stream. Defaults to 1 when omitted. */
+  episode?: number;
 }
 
 export interface Stream {
