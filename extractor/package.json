@@ -1,0 +1,11 @@
+{
+  "name": "@gadgetguy/mov-extractor",
+  "version": "0.1.0",
+  "description": "Hosted Playwright stream-extraction worker for the movie app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/server.ts",
+    "start": "bun run src/server.ts"
+  }
+}

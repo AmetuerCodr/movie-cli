@@ -34,10 +34,15 @@ export class BrowserManager {
     this.headless = headless;
 
     // Allow video to autoplay without a user gesture so embed players begin
-    // loading their stream as soon as the page mounts.
+    // loading their stream as soon as the page mounts. Extra args can be
+    // injected via CHROMIUM_ARGS (space-separated) — the container deploy uses
+    // this to pass --no-sandbox / --disable-dev-shm-usage when running as root.
+    const extraArgs = (process.env.CHROMIUM_ARGS ?? "")
+      .split(/\s+/)
+      .filter(Boolean);
     const launchOptions = {
       headless,
-      args: ["--autoplay-policy=no-user-gesture-required"],
+      args: ["--autoplay-policy=no-user-gesture-required", ...extraArgs],
     };
 
     try {

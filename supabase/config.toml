@@ -1,0 +1,15 @@
+# Supabase project config. `project_id` is set when you run `supabase init` /
+# `supabase link`; replace with your own ref or run `supabase link` to manage it.
+project_id = "movie-app"
+
+[functions.tmdb]
+# Public browse data — no auth needed.
+verify_jwt = false
+
+[functions.streams]
+# Public stream resolution — no auth needed.
+verify_jwt = false
+
+[functions.proxy]
+# Public media proxy — must be reachable by the video player without auth.
+verify_jwt = false
